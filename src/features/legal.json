@@ -1,0 +1,186 @@
+{
+  "privacy": [
+    {
+      "kind": "lastUpdated",
+      "text": "Last updated: May 2025"
+    },
+    {
+      "kind": "heading",
+      "text": "1. Overview"
+    },
+    {
+      "kind": "body",
+      "text": "Ekamuthu Admin (\"the App\") is an internal management tool for authorised court administrators of the Ekamuthu platform. This policy explains what information the App accesses, how it is used, and how it is protected."
+    },
+    {
+      "kind": "heading",
+      "text": "2. Information We Collect"
+    },
+    {
+      "kind": "body",
+      "text": "The App accesses your name, email address, and administrator role as stored in your Ekamuthu account. No information is collected that you have not already provided when your account was created by a system administrator."
+    },
+    {
+      "kind": "body",
+      "text": "The browser app stores a short-lived access token in session storage. A refresh token is stored in an HTTP-only cookie. Signing out clears the browser session and revokes the refresh cookie."
+    },
+    {
+      "kind": "body",
+      "text": "If you grant notification permission, a push notification token is registered with the Ekamuthu server so that you receive alerts about game events at your courts."
+    },
+    {
+      "kind": "heading",
+      "text": "3. How We Use Your Information"
+    },
+    {
+      "kind": "body",
+      "text": "Your information is used solely to authenticate your identity, display your admin profile, scope the data shown to the courts you manage, and deliver push notifications for relevant game events. It is never used for advertising or profiling."
+    },
+    {
+      "kind": "heading",
+      "text": "4. Third-Party Services"
+    },
+    {
+      "kind": "body",
+      "text": "The App communicates only with the Ekamuthu backend API operated by your organisation. It contains no analytics SDKs, advertising networks, crash-reporting services, or other third-party data processors."
+    },
+    {
+      "kind": "body",
+      "text": "Browser notifications use the browser\u2019s push service. A subscription endpoint and encryption keys are stored on the server to deliver relevant venue notifications."
+    },
+    {
+      "kind": "heading",
+      "text": "5. Data Retention"
+    },
+    {
+      "kind": "body",
+      "text": "Authentication tokens stored on your device are removed when you sign out or when the token is invalidated. Server-side account data is retained and managed by your organisation's system administrator in accordance with your organisation's own data retention policy."
+    },
+    {
+      "kind": "heading",
+      "text": "6. Security"
+    },
+    {
+      "kind": "body",
+      "text": "Production communication uses HTTPS. Private API responses are not stored by the offline service worker."
+    },
+    {
+      "kind": "heading",
+      "text": "7. Children"
+    },
+    {
+      "kind": "body",
+      "text": "The App is intended for use by adult employees and contractors in an administrative capacity. It is not directed at children under 13 and we do not knowingly collect information from minors."
+    },
+    {
+      "kind": "heading",
+      "text": "8. Changes to This Policy"
+    },
+    {
+      "kind": "body",
+      "text": "We may update this policy from time to time. The date at the top of this page reflects the most recent revision. Continued use of the App following any update constitutes acceptance of the revised policy."
+    },
+    {
+      "kind": "heading",
+      "text": "9. Contact"
+    },
+    {
+      "kind": "body",
+      "text": "For questions about this privacy policy or your data, contact us at support@strangercourt.com."
+    }
+  ],
+  "terms": [
+    {
+      "kind": "lastUpdated",
+      "text": "Last updated: May 2025"
+    },
+    {
+      "kind": "heading",
+      "text": "1. Acceptance"
+    },
+    {
+      "kind": "body",
+      "text": "By accessing or using the Ekamuthu Admin app (\"the App\"), you agree to be bound by these Terms of Service. If you do not agree, do not use the App."
+    },
+    {
+      "kind": "heading",
+      "text": "2. Authorised Use Only"
+    },
+    {
+      "kind": "body",
+      "text": "The App is provided exclusively for use by individuals who have been granted administrator access by an Ekamuthu system administrator. You must not share your credentials, allow unauthorised parties to access the App through your account, or use the App for any purpose outside your administrative duties."
+    },
+    {
+      "kind": "heading",
+      "text": "3. Account Security"
+    },
+    {
+      "kind": "body",
+      "text": "You are responsible for maintaining the confidentiality of your login credentials. You must notify your system administrator immediately if you suspect any unauthorised access to your account. We are not liable for any loss resulting from unauthorised use of your credentials."
+    },
+    {
+      "kind": "heading",
+      "text": "4. Prohibited Activities"
+    },
+    {
+      "kind": "body",
+      "text": "You must not: attempt to reverse-engineer, decompile, or modify the App; use automated tools to interact with the App or its API; interfere with or disrupt the App's infrastructure; or use the App to access data beyond the scope of your assigned administrative role."
+    },
+    {
+      "kind": "heading",
+      "text": "5. Account Termination"
+    },
+    {
+      "kind": "body",
+      "text": "Administrator access may be revoked at any time by a system administrator, without notice, for any reason including but not limited to misuse, departure from the organisation, or security concerns. Upon termination, you must immediately cease using the App."
+    },
+    {
+      "kind": "heading",
+      "text": "6. Intellectual Property"
+    },
+    {
+      "kind": "body",
+      "text": "All content, code, and designs within the App are the property of Ekamuthu and its licensors. No licence is granted to you beyond the right to use the App for its intended administrative purpose."
+    },
+    {
+      "kind": "heading",
+      "text": "7. Disclaimer of Warranties"
+    },
+    {
+      "kind": "body",
+      "text": "The App is provided \"as is\" without warranty of any kind. We do not guarantee that the App will be error-free, uninterrupted, or free of security vulnerabilities. You use the App at your own risk."
+    },
+    {
+      "kind": "heading",
+      "text": "8. Limitation of Liability"
+    },
+    {
+      "kind": "body",
+      "text": "To the maximum extent permitted by applicable law, Ekamuthu shall not be liable for any indirect, incidental, special, or consequential damages, including loss of data, arising from your use of or inability to use the App."
+    },
+    {
+      "kind": "heading",
+      "text": "9. Changes to These Terms"
+    },
+    {
+      "kind": "body",
+      "text": "We may update these terms from time to time. The date at the top of this page reflects the most recent revision. Continued use of the App following any update constitutes acceptance of the revised terms."
+    },
+    {
+      "kind": "heading",
+      "text": "10. Governing Law"
+    },
+    {
+      "kind": "body",
+      "text": "These terms are governed by the laws of Sri Lanka. Any disputes arising from these terms shall be subject to the exclusive jurisdiction of the courts of Sri Lanka."
+    },
+    {
+      "kind": "heading",
+      "text": "11. Contact"
+    },
+    {
+      "kind": "body",
+      "text": "For questions about these terms, contact us at support@strangercourt.com."
+    }
+  ]
+}
