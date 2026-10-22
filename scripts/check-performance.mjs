@@ -1,9 +1,19 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import assert from "node:assert/strict";
-const html = readFileSync("dist/index.html", "utf8");
-const entry = html.match(/src="(\/assets\/[^\"]+\.js)"/)[1];
-const entryBytes = gzipSync(readFileSync(`dist${entry}`)).length;
+// Count the entry and all static imports; lazy routes stay outside the startup budget.
+const manifest = JSON.parse(readFileSync("dist/.vite/manifest.json", "utf8"));
+const entry = Object.keys(manifest).find(key => manifest[key].isEntry);
+assert.ok(entry, "Missing production entry in Vite manifest");
+const startup = new Set();
+function includeStatic(key) {
+  if (startup.has(key)) return;
+  assert.ok(manifest[key], `Missing manifest dependency ${key}`);
+  startup.add(key);
+  for (const dependency of manifest[key].imports || []) includeStatic(dependency);
+}
+includeStatic(entry);
+const entryBytes = [...startup].reduce((bytes, key) => bytes + gzipSync(readFileSync(`dist/${manifest[key].file}`)).length, 0);
 const files = readdirSync("dist/assets").filter((file) => file.endsWith(".js"));
 const total = files.reduce(
   (bytes, file) => bytes + gzipSync(readFileSync(`dist/assets/${file}`)).length,

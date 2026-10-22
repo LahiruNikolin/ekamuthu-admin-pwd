@@ -4,7 +4,7 @@ Independent Android-focused React/Vite browser app. The initial screens were cop
 
 ## Performance is the first priority
 
-Route-level lazy loading keeps login JavaScript around 78 KB gzipped; the build fails above 90 KB for initial JS or 130 KB for all JS. The calendar mounts at most 14 fixed-height rows even with 2,000 entries. Search is debounced, obsolete calendar/search requests are cancelled, requests have bounded retries, and queries have a 30-second freshness window. Blurred headers and native WebView bridge code are absent.
+Route-level lazy loading keeps login JavaScript around 76 KB gzipped; the build fails above 90 KB for initial JS or 130 KB for all JS. The calendar mounts at most 14 fixed-height rows even with 2,000 entries. Search is debounced, obsolete calendar/search requests are cancelled, requests have bounded retries, and queries have a 30-second freshness window. Blurred headers and native WebView bridge code are absent.
 
 The mobile browser smoke uses 4× CPU slowdown and a 2,000-entry fixture, asserts bounded DOM size and no horizontal overflow, and prints scroll-to-last-row latency. This is desktop simulation, not an Android benchmark. Run on the affected Android device before rollout. Large API payloads still need network/JSON decoding work; if real calendar responses are large, backend pagination should be a separate coordinated change.
 
@@ -56,3 +56,13 @@ Verify live login, refresh after expiry, close/reopen, logout/reopen, venue auth
 The backend changes are additive and disabled when Web Push configuration is absent. Apply ordered migration `061_admin_web_push.sql` using the existing migration process, then configure `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT` (a contact mailto/HTTPS URI) on the API and notification worker. Generate a persistent VAPID key pair securely; never expose the private key in Vite configuration. Existing Expo push tokens and delivery continue independently.
 
 The API accepts admin-owned browser subscriptions; the worker queues and retries delivery separately from Expo. Notifications use the existing notification content and owner-scoped deep-link lookup. Production requires HTTPS and an explicit user permission choice in Account. Verify subscribe, foreground update, closed-window delivery, click-through, disable, and logout against staging before rollout. Migration and VAPID configuration have not been applied by this implementation.
+
+## Vercel
+
+This standalone repository uses root directory `./`. The checked-in `vercel.json` selects Vite, runs `npm ci` and `npm run build`, and publishes `dist`. Select **Vite** in the import screen if it still shows Other; keep output directory `dist` and build command `npm run build`.
+
+Set `VITE_API_URL=/api/v1` in Vercel. `/api/*` is explicitly proxied to the existing **staging** Railway backend, matching the local preview environment. Before production rollout, change the destination in `vercel.json` to the production backend. The local `API_PROXY_TARGET` setting only affects the development server. Add the deployed HTTPS origin to the backend's `ADMIN_WEB_ORIGINS` before testing login/refresh. No origin allowlist changes are made by a frontend deployment.
+
+SPA routes fall back to `index.html`; API paths and static assets are excluded from that fallback. API responses are not cached, and service-worker/manifest/offline assets revalidate. Browser-push migration and VAPID configuration remain separate backend rollout steps.
+
+The production build uses Terser with two compression passes while retaining lazy route loading and both JavaScript size budgets. Do not bypass the performance check when configuring Vercel.

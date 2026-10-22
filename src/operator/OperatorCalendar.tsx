@@ -1,3 +1,4 @@
+import WeekTimeline from "./WeekTimeline";
 import BookingDialog, { type CalendarBooking } from "./BookingDialog";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -20,7 +21,7 @@ import type {
   OperatorPlayArea,
 } from "./types";
 const OperationsBoard = lazy(() => import("./OperationsBoard"));
-const WeekTimeline = lazy(() => import("./WeekTimeline"));
+
 const Timeline = lazy(() => import("./Timeline"));
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const monday = (date: string) =>

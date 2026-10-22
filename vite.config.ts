@@ -8,6 +8,24 @@ export default defineConfig(({ mode }) => {
   const target = env.API_PROXY_TARGET || 'http://localhost:8080';
   return {
     plugins: [react()],
+    build: {
+      minify: 'terser',
+      manifest: true,
+      rollupOptions: {
+        output: {
+          onlyExplicitManualChunks: true,
+          // Related lazy screens compress together without entering the login bundle.
+          manualChunks(id) {
+            if (/\/src\/operator\/(OperatorCalendar|WeekTimeline|OperationsBoard|Timeline|BookingDialog|VirtualList|calendarVisibility|useCalendarZoom)\.(tsx?|jsx?)$/.test(id)) return 'calendar';
+            if (/\/src\/features\/(Areas|Templates|Closures|Photos|Promotions|Settings)\.tsx$/.test(id)) return 'venue-tools';
+          },
+        },
+      },
+      terserOptions: {
+        compress: { passes: 2 },
+        format: { comments: "some" },
+      },
+    },
     resolve: { alias: { '@': path.resolve(__dirname, './src') } },
     server: {
       port: 3002,
