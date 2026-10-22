@@ -93,12 +93,7 @@ export default function OperationsBoard({
         court_name: d.court.name,
       })),
     )
-    .filter(
-      (b) =>
-        b.status !== "available" &&
-        b.status !== "cancelled" &&
-        b.game_status !== "cancelled",
-    );
+    .filter((b) => b.status !== "available");
   const changeWeek = (next: string) => setStart(next);
   return (
     <dialog

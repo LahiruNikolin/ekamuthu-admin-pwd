@@ -15,7 +15,12 @@ import type {
   OperatorPlayArea,
 } from "./types";
 import type { CalendarBooking } from "./BookingDialog";
-import { calendarTone } from "./calendarVisibility";
+import {
+  calendarTone,
+  isCalendarCancelled,
+  isCalendarBlocked,
+  calendarRebookedBlocks,
+} from "./calendarVisibility";
 
 type CourtArea = OperatorPlayArea & { court: OperatorCourt };
 type Entry = {
@@ -56,24 +61,23 @@ export default function WeekTimeline({
     width: 400,
     height: 600,
   });
-  const { zoom, zoomIn, zoomOut, resetZoom, minZoom, maxZoom } =
-    useCalendarZoom(
-      viewport,
-      () => {
-        const el = viewport.current;
-        if (el)
-          setScroll({
-            top: el.scrollTop,
-            left: el.scrollLeft,
-            width: el.clientWidth,
-            height: el.clientHeight,
-          });
-      },
-      areas.length > 0 || blocks.length > 0,
-    );
+  const { zoom } = useCalendarZoom(
+    viewport,
+    () => {
+      const el = viewport.current;
+      if (el)
+        setScroll({
+          top: el.scrollTop,
+          left: el.scrollLeft,
+          width: el.clientWidth,
+          height: el.clientHeight,
+        });
+    },
+    areas.length > 0 || blocks.length > 0,
+  );
   const hourHeight = baseHourHeight * zoom;
   const laneWidth = baseLaneWidth * zoom;
-  const [jumpHour, setJumpHour] = useState(8);
+  const rebooked = useMemo(() => calendarRebookedBlocks(blocks), [blocks]);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(start, i)),
     [start],
@@ -187,8 +191,7 @@ export default function WeekTimeline({
       viewport.current.scrollTop = 8 * hourHeight;
       viewport.current.scrollLeft = 0;
     }
-    setJumpHour(8);
-  }, [start]);
+  }, [start, resources.length > 0]);
   const firstLane = Math.max(0, Math.floor(scroll.left / laneWidth) - 1);
   const lastLane = Math.min(
     lanes.length,
@@ -206,67 +209,10 @@ export default function WeekTimeline({
     <section
       className="weekly-time-section nested-week"
       aria-label="Weekly time schedule"
+      data-density={
+        zoom < 0.5 ? "overview" : zoom < 0.8 ? "compact" : "comfortable"
+      }
     >
-      <div className="weekly-time-tools">
-        <div className="weekly-time-key">
-          <span>
-            <i className="time-booked" />
-            Booked
-          </span>
-          <span>
-            <i className="time-blocked" />
-            Blocked
-          </span>
-        </div>
-        <div
-          className="calendar-zoom-controls"
-          role="group"
-          aria-label="Calendar zoom"
-        >
-          <button
-            type="button"
-            aria-label="Zoom out calendar"
-            disabled={zoom <= minZoom}
-            onClick={zoomOut}
-          >
-            −
-          </button>
-          <button
-            type="button"
-            aria-label={`Reset calendar zoom, currently ${Math.round(zoom * 100)} percent`}
-            onClick={resetZoom}
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-          <button
-            type="button"
-            aria-label="Zoom in calendar"
-            disabled={zoom >= maxZoom}
-            onClick={zoomIn}
-          >
-            +
-          </button>
-        </div>
-        <label>
-          Jump to{" "}
-          <select
-            aria-label="Jump to hour"
-            value={jumpHour}
-            onChange={(e) => {
-              const hour = Number(e.target.value);
-              setJumpHour(hour);
-              if (viewport.current)
-                viewport.current.scrollTop = hour * hourHeight;
-            }}
-          >
-            {Array.from({ length: 24 }, (_, hour) => (
-              <option key={hour} value={hour}>
-                {hourLabel(hour)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
       <nav
         className="nested-day-nav"
         aria-label="Jump to day in weekly schedule"
@@ -387,24 +333,23 @@ export default function WeekTimeline({
                       .filter((e) => e.to > firstMinute && e.from < lastMinute)
                       .map((e) => {
                         const b = e.block,
-                          blocked =
-                            b.reservation_purpose === "block" ||
-                            b.status === "unavailable";
+                          blocked = isCalendarBlocked(b),
+                          cancelled = isCalendarCancelled(b);
                         const name =
                           b.admin_assigned_player?.name ||
                           b.admin_contact_name ||
                           b.booking_creator?.name ||
                           (blocked ? "Blocked" : "Booking");
                         const time = `${localInput(b.starts_at, e.zone).slice(11)}–${localInput(b.ends_at, e.zone).slice(11)}`;
-                        const label = `${lane.area.name} · ${name} · ${displayTime(b.starts_at, e.zone)} – ${displayTime(b.ends_at, e.zone)} · ${lane.area.court.name}`;
+                        const label = `${lane.area.name} · ${name} · ${displayTime(b.starts_at, e.zone)} – ${displayTime(b.ends_at, e.zone)} · ${lane.area.court.name}${cancelled ? " · Cancelled" : ""}${rebooked.has(b) ? (cancelled ? " · Time rebooked" : " · Rebooked") : ""}`;
                         return (
                           <Link
                             key={`${b.id}-${b.starts_at}`}
-                            className={`weekly-time-event tone-${blocked ? "slate" : calendarTone(b)}`}
+                            className={`weekly-time-event tone-${calendarTone(b)} ${cancelled ? "is-cancelled" : ""}`}
                             style={{
                               top: (e.from / 60) * hourHeight + 1,
                               height: Math.max(
-                                18,
+                                zoom < 0.5 ? 8 : 18,
                                 ((e.to - e.from) / 60) * hourHeight - 2,
                               ),
                               left: `calc(${(e.column / e.columns) * 100}% + 3px)`,
@@ -439,15 +384,21 @@ export default function WeekTimeline({
                             <strong>{time}</strong>
                             <span>{name}</span>
                             <small>
-                              {blocked
-                                ? "Blocked"
-                                : b.is_recurring
-                                  ? "Weekly booking"
-                                  : (
-                                      b.game_status ||
-                                      b.admin_outcome ||
-                                      "Booked"
-                                    ).replaceAll("_", " ")}
+                              {cancelled
+                                ? rebooked.has(b)
+                                  ? "Cancelled · rebooked"
+                                  : "Cancelled"
+                                : rebooked.has(b)
+                                  ? "Rebooked"
+                                  : blocked
+                                    ? "Blocked"
+                                    : b.is_recurring
+                                      ? "Weekly booking"
+                                      : (
+                                          b.game_status ||
+                                          b.admin_outcome ||
+                                          "Booked"
+                                        ).replaceAll("_", " ")}
                             </small>
                           </Link>
                         );

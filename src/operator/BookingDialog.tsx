@@ -58,7 +58,7 @@ export default function BookingDialog({
     >
       <header className="calendar-dialog-header">
         <div>
-          <p>BOOKING</p>
+          <p>CALENDAR</p>
           <h2 id="calendar-booking-title">Booking details</h2>
         </div>
         <button

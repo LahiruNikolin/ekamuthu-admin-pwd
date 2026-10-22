@@ -23,7 +23,6 @@ export default function Reports({
 }: OperatorContextValue) {
   const zone = selectedCourt?.timezone || "Asia/Colombo";
   const [range, setRange] = useState("this_month");
-  const [all, setAll] = useState(!selectedCourtId);
   const [start, setStart] = useState(colomboDateKey(new Date(), zone));
   const [end, setEnd] = useState(start);
   const now = new Date();
@@ -43,7 +42,7 @@ export default function Reports({
     (/^\d{4}-\d{2}-\d{2}$/.test(bounds.start) &&
       /^\d{4}-\d{2}-\d{2}$/.test(bounds.end) &&
       bounds.start <= bounds.end);
-  const platform = all && decodeAuth().role === "sys_admin";
+  const platform = !selectedCourtId && decodeAuth().role === "sys_admin";
   const params = new URLSearchParams(
     range === "all_time" || !validRange
       ? { all_time: "true" }
@@ -102,16 +101,6 @@ export default function Reports({
           <Input label="From" type="date" value={start} set={setStart} />
           <Input label="To" type="date" min={start} value={end} set={setEnd} />
         </>
-      )}
-      {decodeAuth().role === "sys_admin" && (
-        <label>
-          <input
-            type="checkbox"
-            checked={all}
-            onChange={(e) => setAll(e.target.checked)}
-          />
-          All venues (platform report)
-        </label>
       )}
       {!validRange && <p role="alert">Choose a valid start and end date.</p>}
       <Load query={query} />

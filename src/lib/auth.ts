@@ -42,7 +42,6 @@ export function decodeAuth(): AuthState {
   try {
     const payload = jwtDecode<JWTPayload>(token);
     if (payload.exp * 1000 < Date.now()) {
-      clearToken();
       return {
         isAuthenticated: false,
         userId: null,
@@ -67,8 +66,28 @@ export function decodeAuth(): AuthState {
   }
 }
 
+// Access tokens remain short-lived; the persistent HTTP-only cookie restores them.
+export function tokenNeedsRefresh(token = readToken()): boolean {
+  if (!token) return true;
+  try {
+    const { exp } = jwtDecode<JWTPayload>(token);
+    return !Number.isFinite(exp) || exp * 1000 <= Date.now() + 60_000;
+  } catch {
+    return true;
+  }
+}
 let refreshing: Promise<boolean> | null = null;
-export function refreshWebSession(): Promise<boolean> {
+export function refreshWebSession(
+  rejectedToken?: string | null,
+): Promise<boolean> {
+  // A late 401 must not rotate (or invalidate) the token another request just restored.
+  if (
+    rejectedToken !== undefined &&
+    readToken() &&
+    readToken() !== rejectedToken &&
+    !tokenNeedsRefresh()
+  )
+    return Promise.resolve(true);
   if (!refreshing)
     refreshing = refreshWithSessionLock().finally(() => {
       refreshing = null;
@@ -77,7 +96,10 @@ export function refreshWebSession(): Promise<boolean> {
 }
 async function refreshWithSessionLock(): Promise<boolean> {
   if (typeof navigator !== "undefined" && navigator.locks)
-    return await navigator.locks.request("ekamuthu-admin-session", performRefresh);
+    return await navigator.locks.request(
+      "ekamuthu-admin-session",
+      performRefresh,
+    );
   return performRefresh();
 }
 async function performRefresh(): Promise<boolean> {
@@ -89,14 +111,14 @@ async function performRefresh(): Promise<boolean> {
       headers: { "Content-Type": "application/json", "X-Admin-Web": "1" },
     });
     if (!res.ok) {
-      if (res.status !== 400 && res.status !== 401) throw new Error("Session service unavailable");
+      if (res.status !== 400 && res.status !== 401)
+        throw new Error("Session service unavailable");
       clearToken();
       return false;
     }
     const body = (await res.json()) as { access_token?: string };
     if (!body.access_token) {
-      clearToken();
-      return false;
+      throw new Error("Invalid session response");
     }
     setToken(body.access_token);
     return true;

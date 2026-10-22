@@ -73,7 +73,19 @@ export default function OperatorVenue({
     enabled: !!selectedCourtId,
   });
 
-  if (!selectedCourtId) return null;
+  if (!selectedCourtId)
+    return (
+      <section className="feature-empty">
+        <h3>Choose a venue to manage</h3>
+        <p>
+          Select an individual venue in Settings to manage its play areas and
+          pricing.
+        </p>
+        <Link className="operator-action" to="/settings">
+          Open settings
+        </Link>
+      </section>
+    );
   if (
     playAreasQuery.isLoading ||
     templatesQuery.isLoading ||
@@ -85,15 +97,31 @@ export default function OperatorVenue({
 
   return (
     <section className="operator-page">
-      <nav className="actions">
-        <Link to="/areas">Play areas</Link>
-        <Link to="/templates">Schedules & pricing</Link>
-        <Link to="/closures">Shutdowns</Link>
-        <Link to="/photos">Photos</Link>
-        <Link to="/promotions">Promotions</Link>
-        <Link to="/settings">Settings</Link>
-        <Link to="/games">Games</Link>
-        <Link to="/reports">Reports</Link>
+      <header className="venue-page-heading">
+        <p className="week-eyebrow">VENUE MANAGEMENT</p>
+        <h2>Make your venue work for you</h2>
+        <p>Manage your spaces, schedule and player experience.</p>
+      </header>
+      <nav className="venue-tools" aria-label="Venue management">
+        {[
+          ["/areas", "Play areas", "Courts, spaces & visibility", "▦"],
+          ["/templates", "Schedules & pricing", "Opening hours & rates", "◷"],
+          ["/closures", "Shutdowns", "Holidays & maintenance", "⊘"],
+          ["/photos", "Photos", "Your venue’s first impression", "▧"],
+          ["/promotions", "Promotions", "Special prices & offers", "%"],
+          ["/settings", "Settings", "Venue, booking rules & location", "⚙"],
+          ["/games", "Games", "Players & game activity", "◉"],
+          ["/reports", "Reports", "Revenue & occupancy", "▥"],
+        ].map(([to, title, description, icon]) => (
+          <Link key={to} to={to}>
+            <span aria-hidden="true">{icon}</span>
+            <div>
+              <strong>{title}</strong>
+              <small>{description}</small>
+            </div>
+            <b aria-hidden="true">›</b>
+          </Link>
+        ))}
       </nav>
       <Panel title="Venue status" icon={<Building2 size={18} />}>
         <div className="operator-list-row">

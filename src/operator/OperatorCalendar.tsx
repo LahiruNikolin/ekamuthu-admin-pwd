@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { adminApi } from "@/api/client";
 import { addDays, colomboDateKey, displayDate, displayTime } from "./date";
-import { calendarDisplayBlocks, calendarTone } from "./calendarVisibility";
+import {
+  calendarDisplayBlocks,
+  calendarTone,
+  isCalendarCancelled,
+  isCalendarBlocked,
+} from "./calendarVisibility";
 import { CalendarSkeleton } from "./ui";
 import VirtualList from "./VirtualList";
 import type {
@@ -22,14 +27,11 @@ import type {
 } from "./types";
 const OperationsBoard = lazy(() => import("./OperationsBoard"));
 
-const Timeline = lazy(() => import("./Timeline"));
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const monday = (date: string) =>
   addDays(date, -((new Date(date + "T12:00:00Z").getUTCDay() + 6) % 7));
-const isBlocked = (b: OperatorCalendarBlock) =>
-  b.reservation_purpose === "block" || b.status === "unavailable";
-const isCancelled = (b: OperatorCalendarBlock) =>
-  b.status === "cancelled" || b.game_status === "cancelled";
+const isBlocked = isCalendarBlocked;
+const isCancelled = isCalendarCancelled;
 const nameOf = (b: OperatorCalendarBlock) =>
   b.admin_assigned_player?.name ||
   b.admin_contact_name ||
@@ -72,13 +74,11 @@ export default function OperatorCalendar({
   const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get("date") || "")
     ? params.get("date")!
     : today;
-  const mode = params.get("view") === "day" ? "day" : "week";
-  const start = mode === "week" ? monday(date) : date;
-  const allVenues = params.get("scope") === "all" || !selectedCourtId;
+  const start = monday(date);
+  const allVenues = !selectedCourtId;
   const venues = allVenues
     ? courts
     : courts.filter((c) => c.id === selectedCourtId);
-  const [showCancelled, setShowCancelled] = useState(false);
   const [rowPage, setRowPage] = useState(0);
   const [focus, setFocus] = useState<{
     date: string;
@@ -106,7 +106,7 @@ export default function OperatorCalendar({
       "calendar-overview",
       venues.map((c) => c.id).join(","),
       start,
-      mode,
+      "week",
     ],
     queryFn: ({ signal }) =>
       Promise.all(
@@ -118,7 +118,7 @@ export default function OperatorCalendar({
                 signal,
               ),
               adminApi.get<OperatorCalendarBlock[]>(
-                `/admin/calendar/days?court_id=${court.id}&start_date=${start}&days=${mode === "week" ? 7 : 1}`,
+                `/admin/calendar/days?court_id=${court.id}&start_date=${start}&days=7`,
                 signal,
               ),
             ]);
@@ -159,12 +159,8 @@ export default function OperatorCalendar({
         court_name: d.court.name,
       })),
     )
-    .filter(
-      (b) => b.status !== "available" && (showCancelled || !isCancelled(b)),
-    );
-  const dates = Array.from({ length: mode === "week" ? 7 : 1 }, (_, i) =>
-    addDays(start, i),
-  );
+    .filter((b) => b.status !== "available");
+  const dates = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   // Index once by venue-local day and area. Overnight bookings appear on both days.
   const index = useMemo(() => {
     const result = new Map<string, OperatorCalendarBlock[]>();
@@ -184,7 +180,7 @@ export default function OperatorCalendar({
     for (const entries of result.values())
       entries.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
     return result;
-  }, [blocks, courts, start, mode]);
+  }, [blocks, courts, start]);
   const focusDate = focus?.date || date;
   const dayBlocks = visibleAreas
     .flatMap((a) =>
@@ -194,8 +190,6 @@ export default function OperatorCalendar({
     )
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
   const activeBookings = blocks.filter((b) => !isBlocked(b) && !isCancelled(b));
-  const timelineCourt =
-    venues.find((c) => c.id === (focus?.court || selectedCourtId)) || venues[0];
   const rowOffset = Math.min(
     rowPage * 12,
     Math.max(0, Math.floor((visibleAreas.length - 1) / 12) * 12),
@@ -280,18 +274,14 @@ export default function OperatorCalendar({
       <div className="week-toolbar">
         <div className="week-period">
           <button
-            aria-label={`Previous ${mode}`}
-            onClick={() =>
-              update({ date: addDays(start, mode === "week" ? -7 : -1) })
-            }
+            aria-label="Previous week"
+            onClick={() => update({ date: addDays(start, -7) })}
           >
             <ChevronLeft size={20} />
           </button>
           <label className="week-date-picker">
             <strong>
-              {mode === "week"
-                ? `${displayDate(start)} – ${displayDate(addDays(start, 6))}`
-                : displayDate(date)}
+              {displayDate(start)} – {displayDate(addDays(start, 6))}
             </strong>
             <span>{start.slice(0, 4)}</span>
             <input
@@ -304,36 +294,13 @@ export default function OperatorCalendar({
             />
           </label>
           <button
-            aria-label={`Next ${mode}`}
-            onClick={() =>
-              update({ date: addDays(start, mode === "week" ? 7 : 1) })
-            }
+            aria-label="Next week"
+            onClick={() => update({ date: addDays(start, 7) })}
           >
             <ChevronRight size={20} />
           </button>
         </div>
         <div className="week-view-controls">
-          <button onClick={() => update({ date: today })}>Today</button>
-          <div className="week-segment" aria-label="Calendar view">
-            <button
-              aria-pressed={mode === "week"}
-              onClick={() => update({ view: "" })}
-            >
-              Week
-            </button>
-            <button
-              aria-pressed={mode === "day"}
-              onClick={() =>
-                update({
-                  view: "day",
-                  date: focusDate,
-                  playAreaId: focus?.area || "",
-                })
-              }
-            >
-              Day
-            </button>
-          </div>
           <button
             aria-label="Refresh calendar"
             disabled={refreshing}
@@ -350,44 +317,10 @@ export default function OperatorCalendar({
         </span>
         <ChevronRight size={17} />
       </button>
-      <div className="week-filters">
-        {courts.length > 1 && (
-          <label>
-            <span>Venues</span>
-            <select
-              aria-label="Calendar venues"
-              value={allVenues ? "all" : selectedCourtId}
-              onChange={(e) =>
-                update({
-                  scope: e.target.value === "all" ? "all" : "",
-                  courtId:
-                    e.target.value === "all" ? selectedCourtId : e.target.value,
-                  playAreaId: "",
-                })
-              }
-            >
-              {courts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-              <option value="all">All my venues ({courts.length})</option>
-            </select>
-          </label>
-        )}
-        <label className="week-history">
-          <input
-            type="checkbox"
-            checked={showCancelled}
-            onChange={(e) => setShowCancelled(e.target.checked)}
-          />
-          Show cancelled
-        </label>
-      </div>
       <div className="week-summary">
         <span>
-          <strong>{loading ? "—" : activeBookings.length}</strong> bookings{" "}
-          {mode === "week" ? "this week" : "on this day"}
+          <strong>{loading ? "—" : activeBookings.length}</strong> bookings this
+          week
         </span>
         <span>
           <strong>{loading ? "—" : blocks.filter(isBlocked).length}</strong>{" "}
@@ -405,7 +338,7 @@ export default function OperatorCalendar({
       )}
       {loading ? (
         <CalendarSkeleton />
-      ) : mode === "week" ? (
+      ) : (
         <>
           <Suspense fallback={<CalendarSkeleton />}>
             <WeekTimeline
@@ -456,7 +389,7 @@ export default function OperatorCalendar({
                         key={day}
                         className={`week-cell ${entries.length ? "has-entries" : ""} ${focus?.area === a.id && focusDate === day ? "is-focused" : ""}`}
                         onClick={() => choose(day, a.id, a.court.id)}
-                        aria-label={`${a.name}, ${displayDate(day)}: ${bookings.length} bookings, ${blocked} blocked times${showCancelled ? `, ${entries.filter(isCancelled).length} cancelled` : ""}`}
+                        aria-label={`${a.name}, ${displayDate(day)}: ${bookings.length} bookings, ${blocked} blocked times, ${entries.filter(isCancelled).length} cancelled`}
                         aria-pressed={focus?.area === a.id && focusDate === day}
                       >
                         <span className="week-cell-count">
@@ -541,12 +474,10 @@ export default function OperatorCalendar({
                 <i className="recurring-dot" />
                 Weekly
               </span>
-              {showCancelled && (
-                <span>
-                  <i className="cancelled-dot" />
-                  Cancelled
-                </span>
-              )}
+              <span>
+                <i className="cancelled-dot" />
+                Cancelled
+              </span>
               <span>Tap a day for details</span>
             </div>
           </details>
@@ -563,17 +494,6 @@ export default function OperatorCalendar({
                   <span> · {dayBlocks.length} entries</span>
                 </h3>
               </div>
-              <button
-                onClick={() =>
-                  update({
-                    date: focusDate,
-                    view: "day",
-                    playAreaId: focus?.area || "",
-                  })
-                }
-              >
-                Day timeline <ChevronRight size={15} />
-              </button>
             </div>
             {dayBlocks.length ? (
               <VirtualList
@@ -601,52 +521,6 @@ export default function OperatorCalendar({
             )}
           </div>
         </>
-      ) : (
-        timelineCourt && (
-          <>
-            <div className="week-timeline-caption">
-              <strong>{timelineCourt.name}</strong>
-              {venues.length > 1 && (
-                <select
-                  aria-label="Timeline venue"
-                  value={timelineCourt.id}
-                  onChange={(e) =>
-                    setFocus({ date, area: "", court: e.target.value })
-                  }
-                >
-                  {venues.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <span>All times are local to this venue</span>
-            </div>
-            <Suspense fallback={<CalendarSkeleton />}>
-              <Timeline
-                courtId={timelineCourt.id}
-                key={`${timelineCourt.id}-${date}`}
-                blocks={
-                  data.find((d) => d.court.id === timelineCourt.id)?.blocks ||
-                  []
-                }
-                areas={visibleAreas.filter(
-                  (a) => a.court.id === timelineCourt.id,
-                )}
-                date={date}
-                days={1}
-                zone={timelineCourt.timezone || "Asia/Colombo"}
-                step={
-                  (timelineCourt as { allow_half_hour_bookings?: boolean })
-                    .allow_half_hour_bookings === false
-                    ? 60
-                    : 30
-                }
-              />
-            </Suspense>
-          </>
-        )
       )}
     </section>
   );
@@ -676,11 +550,13 @@ function BookingRow({
           {b.play_area_name}
         </span>
         <small>
-          {(isBlocked(b)
-            ? "Blocked"
-            : b.admin_outcome ||
-              b.game_status ||
-              (b.is_recurring ? "Weekly booking" : "Booked")
+          {(isCancelled(b)
+            ? "Cancelled"
+            : isBlocked(b)
+              ? "Blocked"
+              : b.admin_outcome ||
+                b.game_status ||
+                (b.is_recurring ? "Weekly booking" : "Booked")
           ).replaceAll("_", " ")}
         </small>
       </div>

@@ -6,12 +6,12 @@ import {
   type RefObject,
 } from "react";
 
-const MIN_ZOOM = 0.65;
-const MAX_ZOOM = 2;
+export const MIN_ZOOM = 0.25;
+export const MAX_ZOOM = 2;
 const AXIS_WIDTH = 58;
 const HEADER_HEIGHT = 88;
 const STORAGE_KEY = "admin-calendar-grid-zoom";
-const clampZoom = (value: number) =>
+export const clampZoom = (value: number) =>
   Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value)) * 100) / 100;
 type Anchor = { worldX: number; worldY: number; x: number; y: number };
 type Pinch = Anchor & { distance: number; zoom: number };

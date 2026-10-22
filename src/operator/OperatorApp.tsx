@@ -72,7 +72,22 @@ function useOperatorContext(): OperatorContextValue {
     queryFn: () => adminApi.get<OperatorCourt[]>("/admin/courts"),
   });
   const courts = courtsQuery.data ?? [];
-  const [selectedCourtId, setSelectedCourtId] = useState("");
+  const venueKey = `admin-venue:${decodeAuth().userId || ""}`;
+  const [selectedCourtId, setSelection] = useState(() => {
+    try {
+      return localStorage.getItem(venueKey) || "";
+    } catch {
+      return "";
+    }
+  });
+  function setSelectedCourtId(id: string) {
+    setSelection(id);
+    try {
+      localStorage.setItem(venueKey, id);
+    } catch {
+      /* Optional preference. */
+    }
+  }
   const location = useLocation();
   useEffect(() => {
     const id = new URLSearchParams(location.search).get("courtId");
@@ -200,6 +215,8 @@ function OperatorShell() {
     refetchIntervalInBackground: false,
   });
 
+  if (ctx.courtsLoading) return <OperatorBootScreen title="Opening venue" />;
+
   return (
     <div className="operator-app">
       <header className="operator-header">
@@ -207,7 +224,7 @@ function OperatorShell() {
           <p className="operator-eyebrow">Ekamuthu Admin</p>
           <h1>
             {ctx.selectedCourt?.name ??
-              (ctx.courts.length ? "Select venue" : "No venue selected")}
+              (ctx.courts.length ? "All venues" : "No venue selected")}
           </h1>
         </div>
         <Link
@@ -244,7 +261,6 @@ function OperatorShell() {
         {!ctx.courtsLoading && !ctx.courtsError && !ctx.courts.length && (
           <p>No venues assigned to this account. Contact your administrator.</p>
         )}
-        {location.pathname !== "/calendar" && <CourtSwitcher {...ctx} />}
         <Suspense fallback={<OperatorListSkeleton />}>
           <Routes>
             <Route path="/" element={<OperatorDashboard {...ctx} />} />
@@ -269,13 +285,7 @@ function OperatorShell() {
             />
             <Route
               path="/settings"
-              element={
-                ctx.selectedCourtId ? (
-                  <Settings key={ctx.selectedCourtId} {...ctx} />
-                ) : (
-                  <p>Select a venue to continue.</p>
-                )
-              }
+              element={<Settings key={ctx.selectedCourtId} {...ctx} />}
             />
             <Route
               path="/photos"
@@ -283,7 +293,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Photos key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -293,7 +306,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Areas key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -303,7 +319,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Closures key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -313,7 +332,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Promotions key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -323,7 +345,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Templates key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -333,7 +358,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Booking key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -343,7 +371,10 @@ function OperatorShell() {
                 ctx.selectedCourtId ? (
                   <Booking key={ctx.selectedCourtId} {...ctx} />
                 ) : (
-                  <p>Select a venue to continue.</p>
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
                 )
               }
             />
@@ -393,33 +424,6 @@ function OperatorShell() {
         />
       </nav>
     </div>
-  );
-}
-
-function CourtSwitcher({
-  courts,
-  selectedCourtId,
-  setSelectedCourtId,
-}: OperatorContextValue) {
-  if (courts.length <= 1 && decodeAuth().role !== "sys_admin") return null;
-  return (
-    <label className="operator-select">
-      <span>Venue</span>
-      <select
-        value={selectedCourtId || "__all__"}
-        onChange={(event) => setSelectedCourtId(event.target.value)}
-      >
-        {decodeAuth().role === "sys_admin" && (
-          <option value="__all__">All venues</option>
-        )}
-        {courts.map((court) => (
-          <option key={court.id} value={court.id}>
-            {court.name}
-          </option>
-        ))}
-      </select>
-      <ChevronDown size={18} />
-    </label>
   );
 }
 

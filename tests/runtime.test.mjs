@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
+import { jwtDecode } from "jwt-decode";
 
 function authHarness(fetch, extra = {}) {
   const storage = new Map();
@@ -20,7 +21,7 @@ function authHarness(fetch, extra = {}) {
     }).outputText,
     {
       exports,
-      require: () => ({ jwtDecode: () => ({}) }),
+      require: () => ({ jwtDecode }),
       fetch,
       ...extra,
       AbortSignal,
@@ -201,4 +202,71 @@ test("separate tabs serialize rotating refresh cookies with the same origin lock
   assert.deepEqual(await Promise.all([first.refreshWebSession(), second.refreshWebSession()]), [true, true]);
   assert.equal(peak, 1);
   assert.equal(cookie, 2);
+});
+
+
+const jwt = (exp) => `e30.${Buffer.from(JSON.stringify({ exp, uid: 'admin', role: 'court_admin' })).toString('base64url')}.fixture`;
+test('app restart restores a session from its persistent cookie without an access token', async () => {
+  let options;
+  const fresh = jwt(Math.floor(Date.now() / 1000) + 900);
+  const auth = authHarness(async (_, init) => { options = init; return { ok: true, json: async () => ({ access_token: fresh }) }; });
+  assert.equal(auth.readToken(), null);
+  assert.equal(await auth.refreshWebSession(), true);
+  assert.equal(options.credentials, 'include');
+  assert.equal(auth.decodeAuth().isAuthenticated, true);
+});
+test('access expiry is renewed silently and does not discard the stale token prematurely', () => {
+  const auth = authHarness(() => assert.fail('no network request expected'));
+  const expired = jwt(Math.floor(Date.now() / 1000) - 1);
+  auth.setToken(expired);
+  assert.equal(auth.decodeAuth().isAuthenticated, false);
+  assert.equal(auth.readToken(), expired);
+  assert.equal(auth.tokenNeedsRefresh(), true);
+  auth.setToken(jwt(Math.floor(Date.now() / 1000) + 30));
+  assert.equal(auth.tokenNeedsRefresh(), true);
+  auth.setToken(jwt(Math.floor(Date.now() / 1000) + 900));
+  assert.equal(auth.tokenNeedsRefresh(), false);
+});
+test('late unauthorized requests do not rotate a fresh token again', async () => {
+  const auth = authHarness(() => assert.fail('fresh session must be reused'));
+  auth.setToken(jwt(Math.floor(Date.now() / 1000) + 900));
+  assert.equal(await auth.refreshWebSession('old-token'), true);
+});
+test('malformed refresh responses preserve the session for retry', async () => {
+  const auth = authHarness(async () => ({ ok: true, json: async () => ({}) }));
+  auth.setToken('retained');
+  await assert.rejects(auth.refreshWebSession(), /Reconnect/);
+  assert.equal(auth.readToken(), 'retained');
+});
+
+test('login retains the requested route while a lazy destination mounts', () => {
+  const states = [], destinations = [];
+  let cursor = 0;
+  const exports = {};
+  const window = { location: { search: '?next=%2Fcalendar' } };
+  const code = readFileSync('src/pages/Login.tsx', 'utf8').replace('import.meta.env.VITE_API_URL', 'undefined');
+  vm.runInNewContext(ts.transpileModule(code, { compilerOptions: {
+    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX,
+  } }).outputText, {
+    exports, window, URLSearchParams,
+    require(name) {
+      if (name === 'react') return {
+        useState(initial) {
+          const index = cursor++;
+          if (!(index in states)) states[index] = typeof initial === 'function' ? initial() : initial;
+          return [states[index], value => { states[index] = value; }];
+        },
+        useEffect(effect) { effect(); },
+      };
+      if (name === 'react/jsx-runtime') return { jsx: () => null, jsxs: () => null };
+      if (name === 'react-router-dom') return { useNavigate: () => path => destinations.push(path) };
+      if (name === '@/lib/auth') return { decodeAuth: () => ({ isAuthenticated: true, role: 'court_admin' }) };
+      return {};
+    },
+  });
+  exports.default();
+  window.location.search = '';
+  cursor = 0;
+  exports.default();
+  assert.deepEqual(destinations, ['/calendar', '/calendar']);
 });

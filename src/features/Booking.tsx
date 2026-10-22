@@ -681,7 +681,11 @@ function BookingDetail({
   const [end, setEnd] = useState(localInput(releaseEnd, zone));
   const [reason, setReason] = useState("");
   const [advertise, setAdvertise] = useState(false);
-  const active = !["cancelled", "expired"].includes(b.status);
+  const cancelled = b.status === "cancelled" || b.game_status === "cancelled";
+  const bookingStatus = cancelled
+    ? "cancelled"
+    : b.admin_outcome || b.game_status || b.status;
+  const active = !cancelled && b.status !== "expired";
   const derived = !!b.is_derived_blocker;
   const release = active && !derived && b.status === "reserved";
   const weekly =
@@ -701,142 +705,192 @@ function BookingDetail({
       void action.run(() => adminApi.patch(path, body), "Calendar updated");
   }
   return (
-    <>
+    <div className="booking-detail">
       {action.feedback}
-      <article className="feature-card">
-        <h3>
-          {b.play_area_name} ·{" "}
-          {b.is_recurring
-            ? "Weekly booking"
-            : statusLabel(b.admin_outcome || b.game_status || b.status)}
-        </h3>
-        <p>
-          {new Date(b.starts_at).toLocaleDateString("en", {
-            timeZone: zone,
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-          <br />
-          {displayTime(b.starts_at, zone)} – {displayTime(b.ends_at, zone)}
-          {colomboDateKey(new Date(b.starts_at), zone) !==
-          colomboDateKey(new Date(b.ends_at), zone)
-            ? " (next day)"
-            : ""}
-          <small className="booking-detail-zone">
-            {zone.replaceAll("_", " ")}
-          </small>
-        </p>
-        <p>
-          LKR {Number(b.price || 0).toLocaleString()}
-          {b.reservation_note ? ` · ${b.reservation_note}` : ""}
-        </p>
-        <Contact
-          phone={b.admin_contact_phone || b.booking_creator?.phone}
-          name={b.admin_contact_name || b.booking_creator?.name}
-        />
-        {b.admin_assigned_player && (
-          <p>Assigned: {b.admin_assigned_player.name}</p>
+      <article className="booking-detail-summary">
+        <div className="booking-detail-status">
+          <span
+            className={`booking-status-badge ${cancelled || bookingStatus === "no_show" ? "is-cancelled" : ""}`}
+          >
+            {statusLabel(bookingStatus)}
+          </span>
+          <span>
+            {b.is_recurring
+              ? "Weekly booking"
+              : b.reservation_purpose === "block" && !b.locked_by_game
+                ? "Blocked time"
+                : "One-time booking"}
+          </span>
+        </div>
+        <h3>{b.play_area_name || "Play area"}</h3>
+        <p className="booking-detail-venue">{b.court_name}</p>
+        <div className="booking-detail-time">
+          <span aria-hidden="true">◷</span>
+          <div>
+            <strong>
+              {displayTime(b.starts_at, zone)} – {displayTime(b.ends_at, zone)}
+              {colomboDateKey(new Date(b.starts_at), zone) !==
+              colomboDateKey(new Date(b.ends_at), zone)
+                ? " (+1 day)"
+                : ""}
+            </strong>
+            <p>
+              {new Date(b.starts_at).toLocaleDateString("en", {
+                timeZone: zone,
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </p>
+            <small>{zone.replaceAll("_", " ")}</small>
+          </div>
+        </div>
+        {(b.reservation_purpose === "booking" || b.locked_by_game) && (
+          <div className="booking-detail-price">
+            <span>Booking value</span>
+            <strong>LKR {Number(b.price || 0).toLocaleString()}</strong>
+          </div>
         )}
-        {b.locked_by_game && (
-          <Link to={`/games/${b.locked_by_game}`}>
-            Game details and player actions
-          </Link>
-        )}
-        {derived && <p>Blocked by {b.blocking_source_play_area_name}</p>}
       </article>
+      {(b.reservation_purpose === "booking" ||
+        b.locked_by_game ||
+        b.admin_contact_name ||
+        b.admin_contact_phone) && (
+        <section className="booking-detail-customer">
+          <h4>Customer</h4>
+          <Contact
+            phone={b.admin_contact_phone || b.booking_creator?.phone}
+            name={
+              b.admin_contact_name ||
+              b.booking_creator?.name ||
+              "No customer details saved"
+            }
+          />
+          {b.admin_assigned_player && (
+            <p>Linked player · {b.admin_assigned_player.name}</p>
+          )}
+        </section>
+      )}
+      {b.reservation_note && (
+        <section className="booking-detail-note">
+          <h4>Booking note</h4>
+          <p>{b.reservation_note}</p>
+        </section>
+      )}
+      {b.locked_by_game && (
+        <Link
+          className="booking-detail-game-link"
+          to={`/games/${b.locked_by_game}`}
+        >
+          View game & players <span aria-hidden="true">→</span>
+        </Link>
+      )}
+      {derived && (
+        <p className="form-hint">
+          Blocked by {b.blocking_source_play_area_name}
+        </p>
+      )}
       {((release && b.reservation_purpose === "booking") ||
         (weekly && b.recurring_booking_kind === "admin_reservation")) && (
-        <Form
-          busy={action.busy}
-          label="Save contact"
-          onSubmit={() =>
-            void action.run(
-              () =>
-                adminApi.patch(contactPath, {
-                  admin_contact_phone: phone,
-                  admin_contact_name: name,
-                }),
-              "Contact updated",
-            )
-          }
-        >
-          <Input
-            label="Customer phone"
-            type="tel"
-            value={phone}
-            set={setPhone}
-          />
-          <Input label="Customer name" value={name} set={setName} />
-          <button
-            type="button"
-            onClick={async () => {
-              setPhone("");
-              setName("");
-            }}
+        <details className="booking-detail-editor">
+          <summary>Edit customer details</summary>
+          <Form
+            busy={action.busy}
+            label="Save contact"
+            onSubmit={() =>
+              void action.run(
+                () =>
+                  adminApi.patch(contactPath, {
+                    admin_contact_phone: phone,
+                    admin_contact_name: name,
+                  }),
+                "Contact updated",
+              )
+            }
           >
-            Clear contact fields
-          </button>
-        </Form>
+            <Input
+              label="Customer phone"
+              type="tel"
+              value={phone}
+              set={setPhone}
+            />
+            <Input label="Customer name" value={name} set={setName} />
+            <button
+              type="button"
+              onClick={async () => {
+                setPhone("");
+                setName("");
+              }}
+            >
+              Clear contact fields
+            </button>
+          </Form>
+        </details>
       )}
       {release && (
-        <Form
-          busy={action.busy}
-          label="Release selected time"
-          onSubmit={async () => {
-            if (
-              !(await confirm(
-                "Release this time? Remaining portions will stay blocked.",
-              ))
-            )
-              return;
-            void action.run(
-              () => {
-                const starts_at = localISO(start, zone),
-                  ends_at = localISO(end, zone);
-                if (
-                  Date.parse(starts_at) < Date.parse(releaseStart) ||
-                  Date.parse(ends_at) > Date.parse(releaseEnd) ||
-                  ends_at <= starts_at
-                )
-                  throw new Error("Release must stay inside this booking.");
-                return adminApi.patch(
-                  b.is_flexible
-                    ? `/admin/flexible-reservations/${b.flexible_booking_id || b.id}/release`
-                    : `/admin/slots/${b.id}/release`,
-                  { starts_at, ends_at },
-                );
-              },
-              "Time released",
-              () => {
-                toast.success("Time released");
-                if (onReleased) {
-                  onReleased();
-                  return;
-                }
-                navigate(
-                  `/calendar?date=${colomboDateKey(new Date(b.starts_at), zone)}&playAreaId=${b.play_area_id || ""}`,
-                );
-              },
-            );
-          }}
-        >
-          <Input
-            label="Release start"
-            type="datetime-local"
-            value={start}
-            set={setStart}
-            required
-          />
-          <Input
-            label="Release end"
-            type="datetime-local"
-            value={end}
-            set={setEnd}
-            required
-          />
-        </Form>
+        <details className="booking-detail-editor booking-detail-release">
+          <summary>Release booking time</summary>
+          <p>
+            Release all or part of this time. The remaining time stays reserved.
+          </p>
+          <Form
+            busy={action.busy}
+            label="Release selected time"
+            onSubmit={async () => {
+              if (
+                !(await confirm(
+                  "Release this time? Remaining portions will stay blocked.",
+                ))
+              )
+                return;
+              void action.run(
+                () => {
+                  const starts_at = localISO(start, zone),
+                    ends_at = localISO(end, zone);
+                  if (
+                    Date.parse(starts_at) < Date.parse(releaseStart) ||
+                    Date.parse(ends_at) > Date.parse(releaseEnd) ||
+                    ends_at <= starts_at
+                  )
+                    throw new Error("Release must stay inside this booking.");
+                  return adminApi.patch(
+                    b.is_flexible
+                      ? `/admin/flexible-reservations/${b.flexible_booking_id || b.id}/release`
+                      : `/admin/slots/${b.id}/release`,
+                    { starts_at, ends_at },
+                  );
+                },
+                "Time released",
+                () => {
+                  toast.success("Time released");
+                  if (onReleased) {
+                    onReleased();
+                    return;
+                  }
+                  navigate(
+                    `/calendar?date=${colomboDateKey(new Date(b.starts_at), zone)}&playAreaId=${b.play_area_id || ""}`,
+                  );
+                },
+              );
+            }}
+          >
+            <Input
+              label="Release start"
+              type="datetime-local"
+              value={start}
+              set={setStart}
+              required
+            />
+            <Input
+              label="Release end"
+              type="datetime-local"
+              value={end}
+              set={setEnd}
+              required
+            />
+          </Form>
+        </details>
       )}
       {active && !derived && b.status === "available" && (
         <Link
@@ -855,7 +909,10 @@ function BookingDetail({
           Book or block this time
         </Link>
       )}
-      <div className="actions">
+      <div
+        className="actions booking-detail-actions"
+        aria-label="Manage booking"
+      >
         {active && !derived && ["available", "held"].includes(b.status) && (
           <button
             disabled={action.busy}
@@ -998,6 +1055,6 @@ function BookingDetail({
           Remove override
         </button>
       )}
-    </>
+    </div>
   );
 }
