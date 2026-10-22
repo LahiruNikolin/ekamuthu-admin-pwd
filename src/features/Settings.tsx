@@ -40,6 +40,7 @@ export default function Settings({
       </Field>
       <Form
         busy={action.busy}
+        label="Save cancellation policy"
         onSubmit={() =>
           void action.run(() =>
             adminApi.patch(
@@ -49,6 +50,15 @@ export default function Settings({
           )
         }
       >
+        <div className="form-section-heading">
+          <div>
+            <h3>Cancellation policy</h3>
+            <p>
+              Late player cancellations within this window can receive a strike.
+              Use 0 to disable the window.
+            </p>
+          </div>
+        </div>
         <Input
           label="Late cancellation strike window (minutes)"
           type="number"
@@ -60,6 +70,7 @@ export default function Settings({
       </Form>
       <Form
         busy={action.busy}
+        label="Save venue location"
         onSubmit={() =>
           void action.run(() =>
             adminApi.patch(`/admin/courts/${selectedCourtId}/maps-link`, {
@@ -68,6 +79,15 @@ export default function Settings({
           )
         }
       >
+        <div className="form-section-heading">
+          <div>
+            <h3>Venue location</h3>
+            <p>
+              Paste a Google Maps share link so players can get directions to
+              your venue.
+            </p>
+          </div>
+        </div>
         <Input
           label="Google Maps share link"
           type="url"

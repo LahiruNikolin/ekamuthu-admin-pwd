@@ -6,6 +6,7 @@ import {
   useAction,
   adminApi,
   Page,
+  EmptyState,
   Load,
   Form,
   Input,
@@ -124,6 +125,7 @@ export default function Closures({
           </button>
         </Form>
       )}
+      {!query.isLoading && !query.isError && query.data?.length === 0 && <EmptyState title="No shutdowns scheduled">Your venue is open as usual. Create a shutdown when a play area or the whole venue needs to close.</EmptyState>}
       {query.data?.map((c) => (
         <article className="feature-card" key={c.id}>
           <h3>{c.reason}</h3>

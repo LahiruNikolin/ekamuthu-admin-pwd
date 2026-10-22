@@ -4,6 +4,7 @@ import {
   useAction,
   adminApi,
   Page,
+  EmptyState,
   Load,
   type RecordData,
 } from "./shared";
@@ -74,6 +75,7 @@ export default function Photos({ selectedCourtId }: OperatorContextValue) {
           }}
         />
       </label>
+      {!query.isLoading && !query.isError && urls.length === 0 && <EmptyState title="Show players your venue">Add clear photos of your play areas. The first photo is your cover.</EmptyState>}
       {urls.map((url, index) => (
         <article className="feature-card" key={url}>
           <img

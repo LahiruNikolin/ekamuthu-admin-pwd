@@ -4,6 +4,9 @@ interface InstallPrompt extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 export default function PwaStatus() {
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem("install-hint-dismissed") === "true",
+  );
   const [online, setOnline] = useState(navigator.onLine);
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [installed, setInstalled] = useState(
@@ -49,7 +52,7 @@ export default function PwaStatus() {
           You’re offline. Displayed information may be out of date.
         </div>
       )}
-      {!installed && (
+      {!installed && !dismissed && (
         <aside className="pwa-install">
           <span>
             Add Ekamuthu Admin to your home screen.
@@ -61,6 +64,16 @@ export default function PwaStatus() {
               Install app
             </button>
           )}
+          <button
+            className="pwa-dismiss"
+            aria-label="Dismiss installation hint"
+            onClick={() => {
+              setDismissed(true);
+              sessionStorage.setItem("install-hint-dismissed", "true");
+            }}
+          >
+            ×
+          </button>
         </aside>
       )}
     </>

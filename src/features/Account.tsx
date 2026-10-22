@@ -22,13 +22,13 @@ export default function Account() {
   const [password, setPassword] = useState("");
   const [repeat, setRepeat] = useState("");
   return (
-    <Page title="Account">
+    <Page title="Account" backTo="/" backLabel="Dashboard">
       <Load query={profile} />
       {profile.data && (
         <article className="feature-card">
           <h3>{profile.data.name}</h3>
           <p>
-            {profile.data.email} · {profile.data.role}
+            {profile.data.email} · {profile.data.role === "sys_admin" ? "System administrator" : "Court administrator"}
           </p>
         </article>
       )}

@@ -6,6 +6,7 @@ import {
   useAction,
   adminApi,
   Page,
+  EmptyState,
   Load,
   Form,
   Input,
@@ -52,7 +53,7 @@ function GameList({
     `/admin/games?court_id=${courtId}&status=${status}&date=${date}&limit=25&offset=${offset}`,
   );
   return (
-    <Page title="Games">
+    <Page title="Games" backTo="/" backLabel="Dashboard">
       <Select
         label="Status"
         value={status}
@@ -100,7 +101,7 @@ function GameList({
           </Link>
         );
       })}
-      {query.data?.length === 0 && <p>No games found.</p>}
+      {!query.isLoading && !query.isError && query.data?.length === 0 && <EmptyState title="No games in this view">Try a different status or date range to find a game.</EmptyState>}
       <div className="actions">
         <button disabled={!offset} onClick={() => setOffset(offset - 25)}>
           Previous

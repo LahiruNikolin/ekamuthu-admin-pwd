@@ -5,6 +5,7 @@ import {
   useAction,
   adminApi,
   Page,
+  EmptyState,
   Load,
   Form,
   Input,
@@ -112,7 +113,7 @@ export default function Areas({ selectedCourtId }: OperatorContextValue) {
         Add play area or group
       </button>
       {editing && (
-        <Form busy={action.busy} onSubmit={() => void save()}>
+        <Form busy={action.busy} label={form.id ? "Save play area" : "Create play area"} onSubmit={() => void save()}>
           <Select
             label="Type"
             value={mode}
@@ -214,6 +215,7 @@ export default function Areas({ selectedCourtId }: OperatorContextValue) {
           </button>
         </Form>
       )}
+      {!query.isLoading && !query.isError && query.data?.length === 0 && <EmptyState title="No play areas yet">Add your first play area to start accepting bookings.</EmptyState>}
       {query.data?.map((a) => (
         <article className="feature-card" key={a.id}>
           <h3>{a.name}</h3>

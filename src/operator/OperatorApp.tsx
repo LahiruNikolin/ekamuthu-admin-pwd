@@ -225,19 +225,20 @@ function OperatorShell() {
         >
           <SettingsIcon size={21} />
         </Link>
+        {location.pathname !== "/calendar" && (
+          <button
+            className="operator-icon-button"
+            aria-label="Refresh current view"
+            onClick={() => void client.invalidateQueries()}
+          >
+            ↻
+          </button>
+        )}
       </header>
 
       <main
         className={`operator-main ${location.pathname === "/calendar" ? "calendar-main" : ""}`}
       >
-        {location.pathname !== "/calendar" && (
-          <button
-            className="operator-action"
-            onClick={() => void client.invalidateQueries()}
-          >
-            Refresh current view
-          </button>
-        )}
         {ctx.courtsLoading && <p role="status">Loading venues…</p>}
         {ctx.courtsError && <QueryError retry={ctx.retryCourts} />}
         {!ctx.courtsLoading && !ctx.courtsError && !ctx.courts.length && (

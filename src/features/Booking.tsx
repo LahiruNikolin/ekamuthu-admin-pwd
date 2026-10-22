@@ -20,9 +20,16 @@ import {
   Contact,
   Field,
   statusLabel,
+  EmptyState,
   type RecordData,
 } from "./shared";
-import { localISO, localInput, colomboDateKey, displayTime } from "@/operator/date";
+import {
+  localISO,
+  localInput,
+  colomboDateKey,
+  displayTime,
+  displayDate,
+} from "@/operator/date";
 import type { OperatorContextValue } from "@/operator/types";
 export default function Booking(ctx: OperatorContextValue) {
   const { bookingId } = useParams();
@@ -31,12 +38,11 @@ export default function Booking(ctx: OperatorContextValue) {
     params.get("date") ||
     colomboDateKey(new Date(), ctx.selectedCourt?.timezone || "Asia/Colombo");
   return (
-    <Page title={bookingId ? "Booking details" : "New booking or blocked time"}>
-      <Link
-        to={`/calendar?date=${date}&playAreaId=${params.get("playAreaId") || ""}`}
-      >
-        ← Calendar
-      </Link>
+    <Page
+      title={bookingId ? "Booking details" : "New booking"}
+      backTo={`/calendar?date=${date}`}
+      backLabel="Calendar"
+    >
       {bookingId ? (
         <BookingDetails
           bookingId={bookingId}
@@ -108,6 +114,7 @@ function BookingForm({
   date,
 }: OperatorContextValue & { date: string }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [search] = useSearchParams();
   const initialItems = (
     location.state as {
@@ -164,7 +171,21 @@ function BookingForm({
   }, [areas.data]);
   function itemSet(i: number, key: string, value: string) {
     setItems((prev) =>
-      prev.map((item, n) => (n === i ? { ...item, [key]: value } : item)),
+      prev.map((item, n) => {
+        if (n !== i) return item;
+        if (key === "start") {
+          const duration =
+            Date.parse(item.end + "Z") - Date.parse(item.start + "Z");
+          const next = Date.parse(value + "Z");
+          if (duration > 0 && Number.isFinite(next))
+            return {
+              ...item,
+              start: value,
+              end: new Date(next + duration).toISOString().slice(0, 16),
+            };
+        }
+        return { ...item, [key]: value };
+      }),
     );
   }
   async function save() {
@@ -178,9 +199,21 @@ function BookingForm({
         for (const item of ranges)
           if (
             !item.play_area_id ||
+            !Number.isFinite(Date.parse(item.starts_at)) ||
+            !Number.isFinite(Date.parse(item.ends_at)) ||
             Date.parse(item.ends_at) <= Date.parse(item.starts_at)
           )
             throw new Error("Choose an area and an end after the start.");
+        for (let i = 0; i < ranges.length; i++)
+          for (let j = i + 1; j < ranges.length; j++)
+            if (
+              ranges[i].play_area_id === ranges[j].play_area_id &&
+              ranges[i].starts_at < ranges[j].ends_at &&
+              ranges[j].starts_at < ranges[i].ends_at
+            )
+              throw new Error(
+                "Two time ranges overlap in the same play area. Adjust or remove one before saving.",
+              );
         const contact =
           kind === "block"
             ? {}
@@ -220,110 +253,375 @@ function BookingForm({
       kind === "weekly"
         ? "Weekly booking started. Future weeks are being protected in the background."
         : "Calendar updated",
-      () => setRequestId(crypto.randomUUID()),
+      () => {
+        setRequestId(crypto.randomUUID());
+        toast.success(
+          kind === "weekly"
+            ? "Weekly booking created"
+            : kind === "block"
+              ? "Time blocked"
+              : "Booking saved",
+        );
+        navigate(
+          `/calendar?date=${items[0].start.slice(0, 10)}&courtId=${selectedCourtId}`,
+        );
+      },
     );
   }
+  const kinds = [
+    {
+      id: "booking",
+      title: "One-time",
+      description: "A single booking",
+      icon: "01",
+    },
+    {
+      id: "weekly",
+      title: "Weekly",
+      description: "Repeat every week",
+      icon: "↻",
+    },
+    {
+      id: "block",
+      title: "Block time",
+      description: "Keep time unavailable",
+      icon: "⊘",
+    },
+    {
+      id: "historical",
+      title: "Past game",
+      description: "Record a game played",
+      icon: "↶",
+    },
+  ];
+  const submitLabel =
+    kind === "block"
+      ? "Block time"
+      : kind === "weekly"
+        ? "Create weekly booking"
+        : kind === "historical"
+          ? "Record past game"
+          : "Create booking";
+  const totalMinutes = items.reduce(
+    (total, item) =>
+      total +
+      Math.max(
+        0,
+        (Date.parse(item.end + "Z") - Date.parse(item.start + "Z")) / 60000 ||
+          0,
+      ),
+    0,
+  );
+  function setDuration(i: number, minutes: number) {
+    const start = Date.parse(items[i].start + "Z");
+    if (!Number.isFinite(start)) return;
+    itemSet(
+      i,
+      "end",
+      new Date(start + minutes * 60000).toISOString().slice(0, 16),
+    );
+  }
+  if (areas.isLoading || areas.isError) return <Load query={areas} />;
+  if (!areas.data?.length)
+    return (
+      <EmptyState title="Add a play area first">
+        Your venue needs a play area before you can create a booking.{" "}
+        <Link to="/areas">Manage play areas →</Link>
+      </EmptyState>
+    );
   return (
-    <>
-      <Load query={areas} />
+    <div className="booking-create">
+      <div className="booking-context">
+        <span className="booking-context-dot" />{" "}
+        <strong>{selectedCourt?.name}</strong>
+        <span>{zone.replaceAll("_", " ")} time</span>
+      </div>
       {action.feedback}
-      <p>All times use {zone}.</p>
-      <Form busy={action.busy} label="Create" onSubmit={() => void save()}>
-        <Select
-          label="Action"
-          value={kind}
-          set={(v) => {
-            setKind(v);
-            if (v === "weekly" || v === "historical")
-              setItems(items.slice(0, 1));
-          }}
-          options={["booking", "block", "weekly", "historical"].map((id) => ({
-            id,
-            name: {
-              booking: "One-time booking",
-              block: "Block time",
-              weekly: "Weekly booking",
-              historical: "Record historical game",
-            }[id]!,
-          }))}
-        />
-        {items.map((item, i) => (
-          <section className="feature-card" key={i}>
-            <Select
-              label={`Play area ${i + 1}`}
-              value={item.play_area_id}
-              set={(v) => itemSet(i, "play_area_id", v)}
-              options={(areas.data || []).map((a) => ({
-                id: a.id,
-                name: a.name,
-              }))}
-            />
-            <Input
-              label="Start"
-              type="datetime-local"
-              value={item.start}
-              set={(v) => itemSet(i, "start", v)}
-              required
-            />
-            <Input
-              label="End"
-              type="datetime-local"
-              min={item.start}
-              value={item.end}
-              set={(v) => itemSet(i, "end", v)}
-              required
-            />
-            {items.length > 1 && (
+      <Form busy={action.busy} label={submitLabel} onSubmit={() => void save()}>
+        <section className="booking-section">
+          <div className="form-section-heading">
+            <span>1</span>
+            <div>
+              <h3>What would you like to do?</h3>
+              <p>Choose how this time should appear in your calendar.</p>
+            </div>
+          </div>
+          <div
+            className="booking-kind-options"
+            role="group"
+            aria-label="Booking type"
+          >
+            {kinds.map((option) => (
               <button
                 type="button"
-                onClick={() => setItems(items.filter((_, n) => n !== i))}
+                key={option.id}
+                aria-pressed={kind === option.id}
+                onClick={() => {
+                  setKind(option.id);
+                  if (["weekly", "historical"].includes(option.id))
+                    setItems(items.slice(0, 1));
+                }}
               >
-                Remove range
+                <span className="booking-kind-icon" aria-hidden="true">
+                  {option.icon}
+                </span>
+                <strong>{option.title}</strong>
+                <small>{option.description}</small>
               </button>
-            )}
-          </section>
-        ))}
-        {["booking", "block"].includes(kind) && (
-          <button
-            type="button"
-            onClick={() => setItems([...items, { ...items[items.length - 1] }])}
-          >
-            Add another area/time
-          </button>
-        )}
+            ))}
+          </div>
+          {kind === "weekly" && (
+            <p className="form-hint">
+              The same play area and time repeat each week. Future weeks are
+              protected in the background.
+            </p>
+          )}
+          {kind === "historical" && (
+            <p className="form-hint">
+              Choose a game that has already ended. This records it in your
+              venue’s history.
+            </p>
+          )}
+          {kind === "block" && (
+            <p className="form-hint">
+              This time will be unavailable for players to book.
+            </p>
+          )}
+        </section>
+        <section className="booking-section">
+          <div className="form-section-heading">
+            <span>2</span>
+            <div>
+              <h3>Play area & time</h3>
+              <p>All times follow your venue’s timezone.</p>
+            </div>
+          </div>
+          {items.map((item, i) => (
+            <div className="booking-range" key={i}>
+              <div className="booking-range-heading">
+                <strong>
+                  {items.length > 1 ? `Time range ${i + 1}` : "When & where"}
+                </strong>
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    aria-label={`Remove time range ${i + 1}`}
+                    onClick={() => setItems(items.filter((_, n) => n !== i))}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <Select
+                label="Play area"
+                value={item.play_area_id}
+                set={(v) => itemSet(i, "play_area_id", v)}
+                options={(areas.data || []).map((a) => ({
+                  id: a.id,
+                  name: a.name,
+                }))}
+              />
+              <div className="booking-date-row">
+                <Input
+                  label="Start date"
+                  type="date"
+                  value={item.start.slice(0, 10)}
+                  set={(v) =>
+                    itemSet(i, "start", `${v}T${item.start.slice(11)}`)
+                  }
+                  required
+                />
+                <Input
+                  label="Start time"
+                  type="time"
+                  value={item.start.slice(11)}
+                  set={(v) =>
+                    itemSet(i, "start", `${item.start.slice(0, 10)}T${v}`)
+                  }
+                  required
+                />
+              </div>
+              <div
+                className="booking-duration"
+                role="group"
+                aria-label={`Duration for time range ${i + 1}`}
+              >
+                <span>Quick duration</span>
+                {[60, 90, 120].map((minutes) => (
+                  <button
+                    type="button"
+                    key={minutes}
+                    aria-pressed={
+                      Date.parse(item.end + "Z") -
+                        Date.parse(item.start + "Z") ===
+                      minutes * 60000
+                    }
+                    onClick={() => setDuration(i, minutes)}
+                  >
+                    {minutes === 60
+                      ? "1 hr"
+                      : minutes === 90
+                        ? "1.5 hrs"
+                        : "2 hrs"}
+                  </button>
+                ))}
+              </div>
+              <div className="booking-date-row">
+                <Input
+                  label="End date"
+                  type="date"
+                  min={item.start.slice(0, 10)}
+                  value={item.end.slice(0, 10)}
+                  set={(v) => itemSet(i, "end", `${v}T${item.end.slice(11)}`)}
+                  required
+                />
+                <Input
+                  label="End time"
+                  type="time"
+                  value={item.end.slice(11)}
+                  set={(v) =>
+                    itemSet(i, "end", `${item.end.slice(0, 10)}T${v}`)
+                  }
+                  required
+                />
+              </div>
+              {Date.parse(item.end) <= Date.parse(item.start) && (
+                <p className="error" role="alert">
+                  End time must be after start time.
+                </p>
+              )}
+            </div>
+          ))}
+          {["booking", "block"].includes(kind) && (
+            <button
+              type="button"
+              className="add-range-button"
+              onClick={() =>
+                setItems([...items, { ...items[items.length - 1] }])
+              }
+            >
+              ＋ Add another play area or time
+            </button>
+          )}
+        </section>
         {kind !== "block" && (
-          <>
+          <section className="booking-section">
+            <div className="form-section-heading">
+              <span>3</span>
+              <div>
+                <h3>Customer details</h3>
+                <p>
+                  Link a registered player by phone, or save a walk-in’s
+                  details.
+                </p>
+              </div>
+            </div>
             <Input
               label="Customer phone"
               type="tel"
+              placeholder="e.g. 077 123 4567"
               value={phone}
               set={setPhone}
             />
-            <Input label="Customer name" value={name} set={setName} />
-            {lookup.isFetching ? (
-              <p>Looking up player…</p>
-            ) : lookup.data?.found ? (
-              <p>
-                Matched player: {lookup.data.player.name}. This booking will be
-                linked to their account.
-              </p>
-            ) : (
-              lookup.data && (
-                <p>
-                  No registered player found; customer contact will be saved.
+            <Input
+              label="Customer name"
+              placeholder="Customer’s name (optional)"
+              value={name}
+              set={setName}
+            />
+            <div aria-live="polite">
+              {lookup.isFetching ? (
+                <p className="form-hint">Looking up player…</p>
+              ) : lookup.data?.found ? (
+                <p className="lookup-match">
+                  ✓ {lookup.data.player.name} · Registered player. This booking
+                  will be linked to their account.
                 </p>
-              )
-            )}
+              ) : lookup.data ? (
+                <p className="form-hint">
+                  No registered player found. Contact details will be saved with
+                  this booking.
+                </p>
+              ) : null}
+            </div>
             {lookup.isError && (
-              <p role="alert">Player lookup failed. Check the phone number.</p>
+              <p className="error" role="alert">
+                Player lookup unavailable. Check the number or try again.
+              </p>
             )}
-          </>
+          </section>
         )}
-        <Input label="Note" value={note} set={setNote} />
+        <section className="booking-section">
+          <div className="form-section-heading">
+            <span>{kind === "block" ? "3" : "4"}</span>
+            <div>
+              <h3>Review & save</h3>
+              <p>Check your time ranges before confirming.</p>
+            </div>
+          </div>
+          <Field label="Note (optional)">
+            <textarea
+              rows={3}
+              placeholder={
+                kind === "block"
+                  ? "e.g. Court maintenance"
+                  : "Anything the team should know?"
+              }
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </Field>
+          <div className="booking-review">
+            <div>
+              <span>
+                {kinds.find((k) => k.id === kind)?.title}
+                {kind === "weekly"
+                  ? " booking"
+                  : kind === "booking"
+                    ? " booking"
+                    : ""}
+              </span>
+              <strong>
+                {items.length}{" "}
+                {items.length === 1 ? "time range" : "time ranges"} ·{" "}
+                {Number((totalMinutes / 60).toFixed(2))} hrs
+                {kind === "weekly" ? " / week" : ""}
+              </strong>
+            </div>
+            <ul>
+              {items.map((item, i) => (
+                <li key={i}>
+                  <strong>
+                    {areas.data?.find((a) => a.id === item.play_area_id)?.name}
+                  </strong>
+                  <span>
+                    {/^\d{4}-\d{2}-\d{2}$/.test(item.start.slice(0, 10))
+                      ? displayDate(item.start.slice(0, 10))
+                      : "Choose a date"}{" "}
+                    · {item.start.slice(11)} →{" "}
+                    {item.start.slice(0, 10) === item.end.slice(0, 10)
+                      ? item.end.slice(11)
+                      : /^\d{4}-\d{2}-\d{2}$/.test(item.end.slice(0, 10))
+                        ? `${displayDate(item.end.slice(0, 10))} · ${item.end.slice(11)}`
+                        : "Choose an end date"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p>
+              Availability is checked when you save. Any conflicts will be shown
+              here.
+            </p>
+          </div>
+        </section>
       </Form>
-    </>
+      <Link className="booking-cancel" to={`/calendar?date=${date}`}>
+        Cancel and return to calendar
+      </Link>
+    </div>
   );
 }
+
 function BookingDetail({
   block: b,
   blocks,
@@ -407,15 +705,32 @@ function BookingDetail({
       {action.feedback}
       <article className="feature-card">
         <h3>
-          {b.play_area_name} · {b.is_recurring ? "Weekly booking" : statusLabel(b.admin_outcome || b.game_status || b.status)}
+          {b.play_area_name} ·{" "}
+          {b.is_recurring
+            ? "Weekly booking"
+            : statusLabel(b.admin_outcome || b.game_status || b.status)}
         </h3>
         <p>
-          {new Date(b.starts_at).toLocaleDateString("en", { timeZone: zone, weekday: "short", month: "short", day: "numeric", year: "numeric" })}<br />
-          {displayTime(b.starts_at, zone)} – {displayTime(b.ends_at, zone)}{colomboDateKey(new Date(b.starts_at), zone) !== colomboDateKey(new Date(b.ends_at), zone) ? " (next day)" : ""}
-          <small className="booking-detail-zone">{zone.replaceAll("_", " ")}</small>
+          {new Date(b.starts_at).toLocaleDateString("en", {
+            timeZone: zone,
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+          <br />
+          {displayTime(b.starts_at, zone)} – {displayTime(b.ends_at, zone)}
+          {colomboDateKey(new Date(b.starts_at), zone) !==
+          colomboDateKey(new Date(b.ends_at), zone)
+            ? " (next day)"
+            : ""}
+          <small className="booking-detail-zone">
+            {zone.replaceAll("_", " ")}
+          </small>
         </p>
         <p>
-          LKR {Number(b.price || 0).toLocaleString()}{b.reservation_note ? ` · ${b.reservation_note}` : ""}
+          LKR {Number(b.price || 0).toLocaleString()}
+          {b.reservation_note ? ` · ${b.reservation_note}` : ""}
         </p>
         <Contact
           phone={b.admin_contact_phone || b.booking_creator?.phone}

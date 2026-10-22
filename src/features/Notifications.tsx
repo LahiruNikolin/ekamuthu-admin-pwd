@@ -5,6 +5,7 @@ import {
   useAction,
   adminApi,
   Page,
+  EmptyState,
   Load,
   type RecordData,
 } from "./shared";
@@ -77,7 +78,7 @@ export default function Notifications({
     else navigate(`/calendar?${params}`);
   }
   return (
-    <Page title="Notifications">
+    <Page title="Notifications" backTo="/account" backLabel="Account">
       <label>
         <input
           type="checkbox"
@@ -94,7 +95,7 @@ export default function Notifications({
       {action.feedback}
       <button
         className="operator-action"
-        disabled={action.busy}
+        disabled={action.busy || !items.length}
         onClick={() =>
           void action.run(
             () => adminApi.patch("/notifications/read-all"),
@@ -119,7 +120,7 @@ export default function Notifications({
           <small>{new Date(n.created_at).toLocaleString()}</small>
         </button>
       ))}
-      {items.length === 0 && <p>No notifications.</p>}
+      {!query.isLoading && !query.isError && items.length === 0 && <EmptyState title={unread ? "You’re all caught up" : "No notifications yet"}>{unread ? "There are no unread updates. Turn off the filter to see previous notifications." : "Booking updates and venue activity will appear here."}</EmptyState>}
       <div className="actions">
         <button disabled={!offset} onClick={() => setOffset(offset - 20)}>
           Previous

@@ -68,12 +68,63 @@ export function useAction() {
             {error}
           </p>
         )}
-        {message && <p role="status">{message}</p>}
+        {message && (
+          <p role="status" className="feedback-success">
+            {message}
+          </p>
+        )}
       </>
     ),
   };
 }
+const pageDescriptions: Record<string, string> = {
+  "Play areas":
+    "Manage the individual courts and spaces players can book at your venue.",
+  "Schedules & pricing":
+    "Set opening hours and hourly prices, then apply them to your play areas.",
+  Games: "Find games and manage player activity at your venue.",
+  "Game details": "Review the game, its players, and available actions.",
+  "New booking":
+    "Reserve a play area, repeat a booking, or keep time unavailable.",
+  "Booking details":
+    "Review the booking and manage its time and customer details.",
+  "Venue settings":
+    "Manage booking preferences and help players find your venue.",
+  "Venue photos":
+    "Give players a clear view of your venue. Your cover photo appears first.",
+  Shutdowns:
+    "Close the venue or selected play areas for maintenance, holidays, or events.",
+  Promotions: "Set special hourly prices for selected play areas and dates.",
+  Account: "Your profile, notification preferences, and account security.",
+  Notifications: "Stay up to date with bookings and changes at your venues.",
+  "Analytics report":
+    "Track revenue, occupancy, and booking activity over time.",
+};
 export function Page({
+  title,
+  children,
+  backTo = "/venue",
+  backLabel = "Venue",
+}: {
+  title: string;
+  children: ReactNode;
+  backTo?: string;
+  backLabel?: string;
+}) {
+  return (
+    <section className="operator-page feature-page">
+      <header className="feature-page-header">
+        <Link className="feature-back" to={backTo}>
+          ← {backLabel}
+        </Link>
+        <h2>{title}</h2>
+        {pageDescriptions[title] && <p>{pageDescriptions[title]}</p>}
+      </header>
+      {children}
+    </section>
+  );
+}
+export function EmptyState({
   title,
   children,
 }: {
@@ -81,10 +132,10 @@ export function Page({
   children: ReactNode;
 }) {
   return (
-    <section className="operator-page">
-      <Link to="/venue">← Venue</Link>
-      <h2>{title}</h2>
-      {children}
+    <section className="feature-empty">
+      <span aria-hidden="true">◇</span>
+      <h3>{title}</h3>
+      <p>{children}</p>
     </section>
   );
 }
@@ -94,11 +145,18 @@ export function Load({
   query: { isLoading: boolean; isError: boolean; refetch: () => unknown };
 }) {
   return query.isLoading ? (
-    <p role="status">Loading…</p>
+    <div className="feature-loading" role="status">
+      <span aria-hidden="true" />
+      Loading details…
+    </div>
   ) : query.isError ? (
-    <p role="alert">
-      Could not load. <button onClick={() => query.refetch()}>Retry</button>
-    </p>
+    <div className="feature-load-error" role="alert">
+      <strong>Unable to load these details</strong>
+      <p>Check your connection and try again.</p>
+      <button type="button" onClick={() => query.refetch()}>
+        Try again
+      </button>
+    </div>
   ) : null;
 }
 export function Field({
@@ -130,6 +188,7 @@ export function Input({
   min,
   max,
   step,
+  placeholder,
 }: {
   label: string;
   value: string | number;
@@ -139,6 +198,7 @@ export function Input({
   min?: string | number;
   max?: string | number;
   step?: string | number;
+  placeholder?: string;
 }) {
   return (
     <Field label={label}>
@@ -150,6 +210,7 @@ export function Input({
         min={min}
         max={max}
         step={step}
+        placeholder={placeholder}
       />
     </Field>
   );
@@ -231,11 +292,17 @@ export function Form({
         onSubmit();
       }}
     >
-      <fieldset disabled={busy}>
+      <fieldset disabled={busy} aria-busy={busy}>
         {children}
-        <button className="operator-action primary" type="submit">
-          {busy ? "Saving…" : label}
-        </button>
+        <div className="form-submit">
+          <button
+            className="operator-action primary"
+            type="submit"
+            disabled={busy}
+          >
+            {busy ? "Saving…" : label}
+          </button>
+        </div>
       </fieldset>
     </form>
   );
@@ -267,7 +334,16 @@ export const statusLabel = (value: string) =>
   value === "confirmed" ? "Upcoming" : value?.replaceAll("_", " ");
 
 export function changeSummary(prefix: string, result: RecordData = {}) {
-  const fields: [string, string][] = [["created", "times generated"], ["skipped", "times skipped"], ["cancelled_games", "games cancelled"], ["cancelled_slots", "times cancelled"], ["price_notified_games", "game prices updated"], ["replaced_templates", "previous schedules suspended"]];
-  const details = fields.filter(([key]) => Number(result?.[key]) > 0).map(([key, label]) => `${result[key]} ${label}`);
+  const fields: [string, string][] = [
+    ["created", "times generated"],
+    ["skipped", "times skipped"],
+    ["cancelled_games", "games cancelled"],
+    ["cancelled_slots", "times cancelled"],
+    ["price_notified_games", "game prices updated"],
+    ["replaced_templates", "previous schedules suspended"],
+  ];
+  const details = fields
+    .filter(([key]) => Number(result?.[key]) > 0)
+    .map(([key, label]) => `${result[key]} ${label}`);
   return prefix + (details.length ? ": " + details.join(", ") : "");
 }

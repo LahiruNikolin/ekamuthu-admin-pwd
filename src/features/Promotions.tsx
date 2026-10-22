@@ -5,6 +5,7 @@ import {
   useAction,
   adminApi,
   Page,
+  EmptyState,
   Load,
   Form,
   Input,
@@ -142,6 +143,7 @@ export default function Promotions({
           </button>
         </Form>
       )}
+      {!query.isLoading && !query.isError && query.data?.length === 0 && <EmptyState title="No promotions yet">Create a promotion to offer special hourly prices on selected dates.</EmptyState>}
       {query.data?.map((p) => (
         <article className="feature-card" key={p.id}>
           <h3>

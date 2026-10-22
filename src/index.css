@@ -1616,3 +1616,64 @@ input:focus-visible {
 .weekly-time-tools { flex-wrap:wrap; row-gap:7px; }
 .operations-calendar-content .weekly-time-tools { flex-wrap:nowrap; }
 @media (orientation:landscape) and (max-height:500px) { .operations-calendar-content .calendar-zoom-controls button { min-width:30px; height:32px; }.operations-calendar-content .calendar-zoom-controls button:nth-child(2) { min-width:43px; }.operations-calendar-content .weekly-time-key { display:none; } }
+
+/* Shared feature screens: touch-friendly controls and a consistent content hierarchy. */
+.feature-page { display:flex; flex-direction:column; gap:16px; width:100%; min-width:0; padding-bottom:24px; }
+.feature-page-header { margin:8px 0 4px; }
+.feature-back { display:inline-flex; align-items:center; min-height:40px; color:var(--operator-muted); font-size:13px; text-decoration:none; }
+.feature-page-header h2 { font-size:26px; line-height:1.2; letter-spacing:-.6px; margin:8px 0; font-weight:750; }
+.feature-page-header>p { max-width:560px; color:var(--operator-muted); font-size:14px; line-height:1.6; margin:0; }
+.feature-page>p { margin:0; line-height:1.6; }
+.feature-page .feature-card { padding:18px; border-radius:14px; }
+.feature-page .feature-card h3 { font-size:16px; line-height:1.4; margin:0 0 10px; font-weight:650; }
+.feature-page .feature-card p { font-size:14px; line-height:1.6; color:#475569; margin:8px 0; }
+.feature-page button:not(.operator-action),.calendar-dialog-content button:not(.operator-action) { font:inherit; }
+.feature-page .edit-form { padding:20px; border-radius:14px; }
+.edit-form>fieldset { margin:0; }
+.edit-form fieldset:disabled { opacity:.7; }
+.field { min-width:0; gap:8px; color:#334155; font-size:13px; font-weight:600; }
+.field input:not([type=checkbox]):not([type=radio]),.field select,.field textarea { min-width:0; max-width:100%; min-height:48px; border-radius:9px; padding:12px; font-size:16px; font-weight:400; line-height:1.4; color:var(--operator-ink); outline-offset:2px; }
+.field input::placeholder,.field textarea::placeholder { color:#94a3b8; }
+.field input:focus-visible,.field select:focus-visible,.field textarea:focus-visible { outline:2px solid #158052; border-color:#158052; }
+.field textarea { resize:vertical; min-height:96px; font-family:inherit; }
+.field input[type=checkbox],.field input[type=radio] { width:22px; height:22px; min-height:22px; accent-color:#158052; padding:0; flex-shrink:0; }
+.field:has(>input[type=checkbox]) { flex-direction:row; align-items:center; justify-content:space-between; padding:16px; background:white; border:1px solid var(--operator-line); border-radius:12px; }
+.feature-page>label:has(input[type=checkbox]) { display:flex; align-items:center; gap:10px; min-height:44px; font-size:14px; }
+.feature-page input[type=checkbox],.checks input { accent-color:#158052; width:20px; height:20px; flex-shrink:0; }
+.edit-form fieldset fieldset { border:1px solid var(--operator-line); padding:12px; border-radius:10px; }
+.edit-form legend { color:#475569; font-size:13px; padding:0 6px; }
+.checks { gap:8px; }.checks label { padding:6px 10px; border:1px solid var(--operator-line); border-radius:8px; font-size:13px; font-weight:500; gap:8px; }
+.checks label:has(input:checked) { background:#edf8f1; border-color:#88bea0; color:#16633e; }
+.feature-page .actions { margin:0; align-items:center; }.feature-page .actions a,.feature-page .actions button { border-radius:9px; font-size:13px; font-weight:550; }
+.feature-page button:disabled { cursor:default; opacity:.45; }
+.feature-page .operator-action { min-height:48px; border-radius:10px; font-size:14px; font-weight:650; }
+.form-submit { display:flex; padding-top:8px; }.form-submit>.operator-action { width:100%; }
+.feature-page .edit-form button[type=button]:not([aria-pressed]):not(.operator-action),.feature-load-error button { min-height:44px; padding:10px 14px; border:1px solid var(--operator-line); border-radius:9px; background:#f8fafc; color:#334155; font-size:13px; }
+.feature-page details { border:1px solid var(--operator-line); border-radius:12px; background:white; padding:16px; }
+.feature-page summary { cursor:pointer; min-height:32px; font-size:14px; font-weight:600; }.feature-page details[open]>summary { margin-bottom:14px; }
+.feature-page .error,.feature-page .feedback-success,.calendar-dialog-content .error { padding:14px 16px; border:1px solid #fecaca; border-radius:10px; background:#fff1f2; font-size:14px; line-height:1.5; margin:0; }
+.feature-page .feedback-success { background:#ecfdf3; border-color:#a7dbbc; color:#166534; }
+.feature-loading { min-height:110px; display:flex; align-items:center; justify-content:center; gap:10px; color:var(--operator-muted); background:white; border:1px solid var(--operator-line); border-radius:12px; font-size:14px; }
+.feature-loading>span { width:8px; height:8px; border-radius:50%; background:#158052; }
+.feature-load-error,.feature-empty { text-align:center; border:1px solid var(--operator-line); border-radius:14px; padding:28px 20px; background:white; }
+.feature-load-error strong,.feature-empty h3 { font-size:16px; font-weight:650; }.feature-load-error p,.feature-empty p { color:var(--operator-muted); font-size:14px; line-height:1.6; margin:8px 0 16px; }.feature-empty>span { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:14px; background:#edf8f1; color:#158052; font-size:25px; }.feature-empty h3 { margin:14px 0 0; }.feature-empty p { margin-bottom:0; }
+.feature-page>button.feature-card { width:100%; text-align:left; cursor:pointer; }.feature-page>button.feature-card:hover { border-color:#88bea0; }.feature-page>button.feature-card small { color:var(--operator-muted); font-size:12px; }
+.feature-page .data-table th { color:var(--operator-muted); text-transform:capitalize; font-size:12px; }.feature-page .data-table td { padding-block:14px; }
+.form-section-heading { display:flex; align-items:flex-start; gap:12px; margin-bottom:20px; }.form-section-heading>span { display:flex; align-items:center; justify-content:center; width:27px; height:27px; flex:0 0 27px; border-radius:50%; color:#17633e; background:#eaf5ee; font-size:12px; font-weight:650; }.form-section-heading h3 { margin:0 0 5px; font-size:16px; line-height:1.5; font-weight:650; }.form-section-heading p,.form-hint { color:var(--operator-muted); font-size:13px; line-height:1.6; margin:0; }
+.booking-context { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:#475569; font-size:12px; margin-bottom:16px; }.booking-context strong { font-weight:600; }.booking-context>span:last-child { margin-left:auto; }.booking-context-dot { width:7px; height:7px; background:#158052; border-radius:50%; }
+.booking-create { width:100%; max-width:760px; }.booking-create>.error { margin-bottom:14px; }.booking-create .edit-form { padding:0; border:0; background:transparent; }.booking-create .edit-form>fieldset { gap:16px; }.booking-section { padding:20px; border:1px solid var(--operator-line); border-radius:14px; background:white; min-width:0; display:flex; flex-direction:column; gap:16px; }.booking-section .form-section-heading { margin-bottom:0; }
+.booking-kind-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }.booking-kind-options button { display:flex; flex-direction:column; gap:4px; align-items:flex-start; text-align:left; padding:14px; border:1px solid var(--operator-line); border-radius:10px; background:white; color:#475569; min-height:112px; }.booking-kind-options button[aria-pressed=true] { background:#edf8f1; border-color:#158052; box-shadow:inset 0 0 0 1px #158052; color:#145c38; }.booking-kind-icon { font-size:18px; line-height:22px; margin-bottom:5px; }.booking-kind-options strong { font-size:14px; font-weight:650; }.booking-kind-options small { font-size:11px; line-height:1.5; }
+.booking-range { display:flex; flex-direction:column; gap:16px; min-width:0; }.booking-range+.booking-range { border-top:1px solid var(--operator-line); padding-top:20px; }.booking-range-heading { display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--operator-muted); }.booking-range-heading>strong { font-weight:500; }.booking-date-row { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:12px; }.booking-date-row input { appearance:none; -webkit-appearance:none; }
+.booking-duration { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }.booking-duration>span { font-size:12px; color:var(--operator-muted); margin-right:auto; }.booking-duration button { border:1px solid var(--operator-line); background:white; padding:8px 10px; border-radius:8px; min-height:40px; color:#475569; font-size:12px!important; }.booking-duration button[aria-pressed=true] { color:#145c38; background:#edf8f1; border-color:#88bea0; }
+.booking-create .add-range-button { width:100%; border-style:dashed!important; color:#16633e!important; background:#f6fbf8!important; }
+.lookup-match { margin:0; padding:12px; color:#16633e; background:#edf8f1; border-radius:8px; font-size:13px; line-height:1.6; }
+.booking-review { border-top:1px solid var(--operator-line); padding-top:16px; }.booking-review>div { display:flex; flex-direction:column; gap:6px; }.booking-review span { color:var(--operator-muted); font-size:12px; }.booking-review strong { font-size:15px; font-weight:600; }.booking-review p { font-size:12px; color:var(--operator-muted); line-height:1.6; margin:10px 0 0; }
+.booking-create .form-submit { position:sticky; bottom:82px; z-index:5; padding:12px; margin-top:-4px; background:#f8fafc; border:1px solid var(--operator-line); border-radius:12px; }.booking-create .form-submit button { min-height:50px; background:#158052; }.booking-cancel { display:block; text-align:center; padding:18px 8px 8px; color:var(--operator-muted); font-size:13px; text-decoration:none; }
+@media(min-width:760px) { .feature-page { max-width:960px; margin-inline:auto; }.booking-create { margin-inline:auto; }.booking-kind-options { grid-template-columns:repeat(4,minmax(0,1fr)); }.booking-section { padding:24px; }.feature-page .edit-form { max-width:760px; }.booking-create .edit-form { max-width:none; }.booking-create .form-submit { bottom:calc(82px + env(safe-area-inset-bottom)); } }
+@media(max-width:380px) { .booking-section { padding:16px; }.booking-date-row { grid-template-columns:minmax(0,1fr); }.booking-context>span:last-child { margin-left:0; width:100%; padding-left:15px; } }
+.pwa-install { position:relative; padding-right:48px; }.pwa-install .pwa-dismiss { position:absolute; top:8px; right:8px; display:flex; align-items:center; justify-content:center; width:32px; min-height:32px; padding:0; border:0; border-radius:7px; background:transparent; color:inherit; font-size:23px; box-shadow:none; }
+.operator-header>div:first-child { min-width:0; margin-right:auto; }.operator-header .operator-icon-button { flex-shrink:0; }
+@media(max-width:600px) { .operator-header { align-items:center; gap:8px; padding:calc(14px + env(safe-area-inset-top)) 18px 14px; }.operator-header h1 { font-size:25px; max-width:190px; }.operator-header .operator-eyebrow { font-size:9px; letter-spacing:.12em; }.operator-header .operator-icon-button { width:38px; height:38px; min-height:38px; }.booking-create .form-submit { bottom:calc(72px + env(safe-area-inset-bottom)); } }
+.feature-page .edit-form .feature-card { display:flex; flex-direction:column; gap:14px; }.feature-page .edit-form .feature-card .field { width:100%; }
+.booking-review ul { list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }.booking-review li { display:flex; flex-direction:column; gap:4px; border:1px solid var(--operator-line); border-radius:8px; padding:12px; }.booking-review li strong { font-size:13px; }.booking-review li span { font-variant-numeric:tabular-nums; line-height:1.5; }
+.feature-page input[type=file] { min-height:72px; background:white; padding:12px; border:1px dashed #aabbb0; border-radius:10px; font-size:13px; }.feature-page input[type=file]::file-selector-button { min-height:40px; padding:8px 12px; border:0; border-radius:7px; background:#edf8f1; color:#16633e; font:inherit; margin-right:10px; cursor:pointer; }.feature-page .edit-form { width:100%; }.feature-page .edit-form>fieldset>section { min-width:0; }.feature-page .edit-form>fieldset>section:not(.booking-section)>h3 { font-size:16px; margin:8px 0 16px; }.feature-page .edit-form .feature-card+.feature-card { margin-top:12px; }
