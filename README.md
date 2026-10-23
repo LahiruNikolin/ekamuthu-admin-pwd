@@ -20,7 +20,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Open http://localhost:3002. The development server proxies `/api` to `API_PROXY_TARGET` (default http://localhost:8080). No production API is hardcoded. Use a test admin account against a test backend. Vite preview is only for checking the static build; it does not configure a production API proxy.
+Open http://localhost:3002. `PROD=false` proxies `/api` to staging; `PROD=true` selects the production API. The explicit flag takes precedence over an old `API_PROXY_TARGET`. To use a local backend, remove `PROD` and set `API_PROXY_TARGET` (default http://localhost:8080). Restart the dev server after changing environment variables. Vite preview is only for checking the static build; it does not configure a production API proxy.
 
 ## Checks
 
@@ -59,9 +59,18 @@ The API accepts admin-owned browser subscriptions; the worker queues and retries
 
 ## Vercel
 
-This standalone repository uses root directory `./`. The checked-in `vercel.json` selects Vite, runs `npm ci` and `npm run build`, and publishes `dist`. Select **Vite** in the import screen if it still shows Other; keep output directory `dist` and build command `npm run build`.
+This standalone repository uses root directory `./`. The checked-in `vercel.mjs` selects Vite, runs `npm ci` and `npm run build`, and publishes `dist`. Select **Vite** in the import screen if it still shows Other; keep output directory `dist` and build command `npm run build`.
 
-Set `VITE_API_URL=/api/v1` in Vercel to retain same-origin refresh cookies. `vercel.json` routes `/api/*` on **ekamuthu-admin-pwd.vercel.app** to the production Railway API. Other hosts, including **ekamuthu-admin-pwd-k18e.vercel.app** and deployment previews, keep the staging API. The production host condition must remain before the staging fallback. When introducing a new production/custom domain, add its host-specific rule before pointing users to it. `API_PROXY_TARGET` only affects the local development server; changing it in Vercel does not change deployed rewrites. Add the deployed HTTPS origin to the backend's `ADMIN_WEB_ORIGINS` if using a direct cross-origin API. No backend origin allowlist changes are made by a frontend deployment.
+Set **PROD** in each Vercel project's Environment Variables, then redeploy:
+
+| Value | API |
+|---|---|
+| `PROD=true` | Production Railway API |
+| `PROD=false` | Staging Railway API |
+
+Use `PROD=true` on the production PWA project and `PROD=false` on the separate staging project. Scope the variable to the intended Vercel environment (Production, Preview or Development); a preview should not inherit production access unintentionally. If `PROD` is missing, deployed routes default to staging. Invalid or empty values stop configuration with an actionable error. This replaces hostname-based API selection, so custom domains follow the same project setting.
+
+Keep `VITE_API_URL=/api/v1` or remove it to use that default. This preserves same-origin HTTP-only refresh cookies. An explicit `PROD` rejects a conflicting direct `VITE_API_URL` rather than silently bypassing the selected proxy. `PROD` controls API routing only; it does not change Vite's built-in `import.meta.env.PROD`, minification or service-worker behavior. `API_PROXY_TARGET` is only a local-development fallback when `PROD` is absent. No backend origin allowlist changes are made by a frontend deployment.
 
 SPA routes fall back to `index.html`; API paths and static assets are excluded from that fallback. API responses are not cached, and service-worker/manifest/offline assets revalidate. Browser-push migration and VAPID configuration remain separate backend rollout steps.
 
