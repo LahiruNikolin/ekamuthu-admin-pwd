@@ -68,10 +68,14 @@ test("failed logout retains the session for retry; successful logout clears it",
 test("service worker ignores API calls and only falls back for same-origin navigation", async () => {
   const handlers = {};
   const cached = [];
+  const deleted = [];
+  let skipped = false, claimed = false;
   vm.runInNewContext(readFileSync("src/service-worker.js", "utf8"), {
     URL,
     self: {
       location: { origin: "https://admin.example" },
+      skipWaiting: async () => { skipped = true; },
+      clients: { claim: async () => { claimed = true; } },
       addEventListener: (type, handler) => {
         handlers[type] = handler;
       },
@@ -80,6 +84,8 @@ test("service worker ignores API calls and only falls back for same-origin navig
       throw new Error("offline");
     },
     caches: {
+      keys: async () => ["unrelated-cache", "ekamuthu-admin-pwa-old"],
+      delete: async key => { deleted.push(key); },
       open: async () => ({
         add: async (path) => cached.push(path),
         match: async (path) => path,
@@ -90,6 +96,10 @@ test("service worker ignores API calls and only falls back for same-origin navig
     handlers.install({ waitUntil: (promise) => promise.then(resolve) }),
   );
   assert.deepEqual(cached, ["/offline.html"]);
+  assert.equal(skipped, true);
+  await new Promise(resolve => handlers.activate({waitUntil: promise => promise.then(resolve)}));
+  assert.equal(claimed, true);
+  assert.deepEqual(deleted, ["ekamuthu-admin-pwa-old"]);
   for (const request of [
     {
       url: "https://admin.example/api/v1/admin/games",
@@ -159,6 +169,8 @@ test("push displays notification and click stays on the app origin", async () =>
         title: "Booking received",
         body: "Details",
         notification_id: "n1",
+        icon: "https://untrusted.example/icon.png",
+        badge: "https://untrusted.example/badge.png",
         data: { url: "https://untrusted.example" },
       }),
     },
@@ -168,6 +180,8 @@ test("push displays notification and click stays on the app origin", async () =>
   });
   await task;
   assert.equal(displayed.title, "Booking received");
+  assert.equal(displayed.options.icon, "/icons/notification-icon.png?v=__BUILD_VERSION__");
+  assert.equal(displayed.options.badge, "/icons/notification-badge.png?v=__BUILD_VERSION__");
   handlers.notificationclick({
     notification: { data: displayed.options.data, close: () => {} },
     waitUntil: (promise) => {
