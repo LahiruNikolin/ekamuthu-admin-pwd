@@ -94,7 +94,7 @@ try {
     id: "t1",
     name: "Weekdays",
     day_type: "weekday",
-    is_active: true,
+    is_active: false,
     entries: [
       {
         start_time: "08:00",
@@ -105,7 +105,7 @@ try {
         sort_order: 0,
       },
     ],
-    activations: [{ play_area_id: "a1", play_area_name: "Main court" }],
+    activations: [],
   };
   await page.route("**/api/v1/**", async (route) => {
     const req = route.request();
@@ -113,6 +113,10 @@ try {
     const body = req.postDataJSON();
     if (req.method() !== "GET") {
       requests.push({ path, method: req.method(), body });
+      if (path === "/admin/courts/c1/templates/t1/active") {
+        template.is_active = body.is_active;
+        template.activations = body.is_active ? [{play_area_id:"a1", play_area_name:"Main court"}] : [];
+      }
       if (path === "/admin/courts/c1/half-hour-bookings")
         court.allow_half_hour_bookings = body.allow_half_hour_bookings;
       if (path === "/admin/reservations" && body.note === "conflict")
@@ -325,10 +329,12 @@ try {
   );
   // Schedule creation and activation.
   await goto("/templates");
-  await page.getByRole("button", { name: "New schedule" }).click();
+  await page.getByRole("link", { name: /New template/ }).click();
   await confirmPending();
-  await page.getByLabel("Schedule name").fill("New schedule");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByLabel("Template name").fill("New template");
+  await page.getByLabel("Hourly rate (LKR)", {exact:true}).nth(0).fill("1000");
+  await page.getByLabel("Hourly rate (LKR)", {exact:true}).nth(1).fill("1200");
+  await page.getByRole("button", { name: "Save template", exact: true }).click();
   await confirmPending();
   assert.equal(
     (await wait("/admin/courts/c1/template-sets")).weekday_entries.length,
@@ -349,6 +355,8 @@ try {
     (await wait("/admin/courts/c1/templates/t1/active")).play_area_ids,
     ["a1"],
   );
+  await goto("/templates");
+  assert.equal(await page.getByRole("button", {name:"Activate",exact:true}).isEnabled(), false);
   // Shutdown, promotion, settings.
   await goto("/closures");
   await page
@@ -483,10 +491,10 @@ try {
   await confirmPending();
   assert.equal(last("/courts/c1/play-areas/a1").method, "DELETE");
   await goto("/templates");
-  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await page.getByRole("link", { name: "Edit", exact: true }).click();
   await confirmPending();
-  await page.getByLabel("Schedule name").fill("Updated schedule");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByLabel("Template name").fill("Updated schedule");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await confirmPending();
   await wait("/admin/courts/c1/templates/t1");
   await page.getByRole("button", { name: "Suspend", exact: true }).click();

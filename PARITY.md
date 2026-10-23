@@ -14,7 +14,7 @@ This inventory maps the native admin routes to independent browser implementatio
 | Games list/detail | `/games`, `/games/:id` | Status/date filters, pagination, players, creator contacts, cancellation reason, no-show, strikes |
 | Players | `/players`, `/players/:id` | Debounced search, strike history, issue strike against game |
 | Play areas | `/areas` | Single/group creation, group unit names, sports/surface/presets/minimum duration, player visibility, blocking relationships, edit/deactivate |
-| Templates | `/templates` | Single or paired weekday/weekend schedules, next-day entries, quick fill, pricing, validation, edit/delete, area-scoped activate/suspend |
+| Templates | `/templates`, `/templates/new`, `/templates/:id/edit` | Dedicated create/edit pages, single or paired weekday/weekend schedules, hourly pricing for new flexible ranges, overnight offsets, review, legacy range-price editing and quick fill, validation, delete, area-scoped activate/suspend |
 | Closures | `/closures` | Facility/selected-area shutdowns, dates/reason, create/edit/delete |
 | Venue photos | `/photos` | Resize/compress/upload, set cover, backend-synchronized delete |
 | Venue overview/settings | `/venue`, `/settings` | Details, half-hour booking setting, late cancellation strike window, Maps share link |
@@ -31,3 +31,5 @@ This inventory maps the native admin routes to independent browser implementatio
 Build budgets enforce ≤90,000 initial and ≤130,000 total gzip JavaScript bytes. Agenda rows and timeline cells are windowed; games, notifications, and report tables are paginated. Route code is loaded on demand.
 
 Live staging API authorization, database migration, provider push delivery, and installation/responsiveness on the affected Android hardware still require rollout validation. Browser fixtures prove UI/request behavior, not successful real database effects. No production migration or deployment is performed by these changes.
+
+Price template range validation has unit coverage for duplicates, nested/reordered ranges, overnight offsets, recurring weekday/weekend boundaries, and conflicts with the active opposite day type on selected play areas. Mobile browser review verified renamed controls, disabled activation and an unsaved invalid recurring range. The updated parity fixture has not been rerun in this change.

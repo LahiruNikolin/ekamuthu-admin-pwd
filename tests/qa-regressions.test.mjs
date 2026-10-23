@@ -230,3 +230,59 @@ test('calendar pinch reaches 25 percent and keeps its midpoint anchored', () => 
   assert.equal(el.scrollTop, 1);
   assert.ok(Number(el.dataset.zoomClickUntil) > Date.now(), 'gesture suppresses accidental booking taps');
 });
+
+test('new flexible schedule rates match proportional API pricing, including overnight', () => {
+  const { normalize } = load('src/features/schedule.ts');
+  const entry = { start_time:'08:00', end_time:'22:00', start_day_offset:0, end_day_offset:0, price:1000, sort_order:0 };
+  const result = normalize([entry], true);
+  assert.equal(result[0].price, 14000);
+  assert.equal(entry.price, 1000, 'review values must remain hourly after saving');
+  assert.equal(normalize([{...entry, start_time:'23:00', end_time:'01:00', end_day_offset:1, price:1500}], true)[0].price, 3000);
+  assert.equal(normalize([{...entry, start_time:'00:00', end_time:'01:00', start_day_offset:1, end_day_offset:1, price:750}], true)[0].price, 750);
+  assert.equal(normalize([entry], false)[0].price, 1000, 'legacy range prices must not be converted');
+});
+test('schedule validation rejects overlaps, bad clocks, missing rates and invalid overnight offsets', () => {
+  const { normalize } = load('src/features/schedule.ts');
+  const entry = { start_time:'08:00', end_time:'10:00', start_day_offset:0, end_day_offset:0, price:500, sort_order:0 };
+  for (const patch of [{start_time:'25:00'}, {end_time:'10:70'}, {price:NaN}, {price:-1}, {end_time:'07:00'}, {start_day_offset:2}])
+    assert.throws(() => normalize([{...entry, ...patch}], true));
+  assert.throws(() => normalize([], true));
+  assert.throws(() => normalize([entry, {...entry, start_time:'09:00', end_time:'11:00'}], true));
+  assert.equal(normalize([entry, {...entry, start_time:'10:00', end_time:'11:00'}], true).length, 2);
+});
+
+test('template ranges reject duplicates, containment and overnight overlaps regardless of row order', () => {
+  const { normalize } = load('src/features/schedule.ts');
+  const row = (start_time, end_time, start_day_offset=0, end_day_offset=0) => ({start_time,end_time,start_day_offset,end_day_offset,price:100,sort_order:0});
+  for (const entries of [
+    [row('08:00','12:00'),row('09:00','10:00')],
+    [row('08:00','12:00'),row('08:00','12:00')],
+    [row('10:00','13:00'),row('08:00','11:00')],
+    [row('23:00','02:00',0,1),row('01:00','03:00',1,1)],
+  ]) assert.throws(() => normalize(entries,false), /overlap/);
+  assert.equal(normalize([row('01:00','02:00',1,1),row('23:00','01:00',0,1)],false).length,2);
+  assert.throws(() => normalize([row('08:00','08:00')],false), /Closing time/);
+});
+
+test('weekly template validation covers repeated days, Friday/Saturday and Sunday/Monday, allowing touching boundaries', () => {
+  const { normalize, validateWeek } = load('src/features/schedule.ts');
+  const row = (start_time,end_time,end_day_offset=0) => ({start_time,end_time,start_day_offset:0,end_day_offset,price:100,sort_order:0});
+  const rows = (...values) => normalize(values,false);
+  assert.throws(() => validateWeek(rows(row('23:00','02:00',1),row('01:00','03:00'))), /next opening day/);
+  assert.throws(() => validateWeek([],rows(row('23:00','02:00',1),row('01:00','03:00'))), /next opening day/);
+  assert.throws(() => validateWeek(rows(row('23:00','02:00',1)),rows(row('01:00','03:00'))), /Weekdays.*Weekends/);
+  assert.throws(() => validateWeek(rows(row('01:00','03:00')),rows(row('23:00','02:00',1))), /Weekends.*Weekdays/);
+  assert.doesNotThrow(() => validateWeek(rows(row('23:00','01:00',1)),rows(row('01:00','02:00'))));
+  assert.doesNotThrow(() => validateWeek(rows(row('23:00','00:00',1),{...row('00:00','01:00',1),start_day_offset:1})));
+});
+
+test('template assignment checks the active opposite day type only in the selected play area', () => {
+  const { validateAssignment } = load('src/features/schedule.ts');
+  const row = (start_time,end_time,end_day_offset=0) => ({start_time,end_time,start_day_offset:0,end_day_offset,price:100,sort_order:0});
+  const candidate = {day_type:'weekday',entries:[row('23:00','02:00',1)]};
+  const active = {day_type:'weekend',entries:[row('01:00','03:00')],activations:[{play_area_id:'a1'}]};
+  assert.throws(() => validateAssignment([candidate],[active],['a1']), /overlaps/);
+  assert.doesNotThrow(() => validateAssignment([candidate],[active],['a2']));
+  assert.doesNotThrow(() => validateAssignment([candidate,{day_type:'weekend',entries:[row('02:00','03:00')]}],[active],['a1']));
+  assert.doesNotThrow(() => validateAssignment([candidate],[{...active,activations:[]}],['a1']));
+});

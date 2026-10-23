@@ -62,6 +62,7 @@ const Areas = lazy(() => import("../features/Areas"));
 const Closures = lazy(() => import("../features/Closures"));
 const Promotions = lazy(() => import("../features/Promotions"));
 const Templates = lazy(() => import("../features/Templates"));
+const NewSchedule = lazy(() => import("../features/NewSchedule"));
 const Booking = lazy(() => import("../features/Booking"));
 const Reports = lazy(() => import("../features/Reports"));
 const Account = lazy(() => import("../features/Account"));
@@ -344,6 +345,32 @@ function OperatorShell() {
               element={
                 ctx.selectedCourtId ? (
                   <Templates key={ctx.selectedCourtId} {...ctx} />
+                ) : (
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
+                )
+              }
+            />
+            <Route
+              path="/templates/new"
+              element={
+                ctx.selectedCourtId ? (
+                  <NewSchedule key={ctx.selectedCourtId + "new"} {...ctx} />
+                ) : (
+                  <p>
+                    Choose a venue in <Link to="/settings">Settings</Link> to
+                    continue.
+                  </p>
+                )
+              }
+            />
+            <Route
+              path="/templates/:templateId/edit"
+              element={
+                ctx.selectedCourtId ? (
+                  <NewSchedule key={ctx.selectedCourtId} {...ctx} />
                 ) : (
                   <p>
                     Choose a venue in <Link to="/settings">Settings</Link> to

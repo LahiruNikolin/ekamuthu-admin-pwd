@@ -78,9 +78,11 @@ export function useAction() {
   };
 }
 const pageDescriptions: Record<string, string> = {
+  "New template": "Set your venue’s opening hours and pricing, ready to apply when you choose.",
+  "Edit template": "Review opening hours and prices before applying changes.",
   "Play areas":
     "Manage the individual courts and spaces players can book at your venue.",
-  "Schedules & pricing":
+  "Price templates":
     "Set opening hours and hourly prices, then apply them to your play areas.",
   Games: "Find games and manage player activity at your venue.",
   "Game details": "Review the game, its players, and available actions.",
@@ -115,7 +117,7 @@ export function Page({
     <section className="operator-page feature-page">
       <header className="feature-page-header">
         <Link className="feature-back" to={backTo}>
-          ← {backLabel}
+          <span aria-hidden="true">←</span> Back to {backLabel}
         </Link>
         <h2>{title}</h2>
         {pageDescriptions[title] && <p>{pageDescriptions[title]}</p>}
@@ -340,7 +342,7 @@ export function changeSummary(prefix: string, result: RecordData = {}) {
     ["cancelled_games", "games cancelled"],
     ["cancelled_slots", "times cancelled"],
     ["price_notified_games", "game prices updated"],
-    ["replaced_templates", "previous schedules suspended"],
+    ["replaced_templates", "previous templates suspended"],
   ];
   const details = fields
     .filter(([key]) => Number(result?.[key]) > 0)

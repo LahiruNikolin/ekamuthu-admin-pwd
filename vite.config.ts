@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
             )
               return "admin-tools";
             if (
-              /\/src\/features\/(Areas|Templates|Closures|Photos|Promotions|Settings)\.tsx$/.test(
+              /\/src\/features\/(Areas|Templates|NewSchedule|schedule|Closures|Photos|Promotions|Settings)\.tsx?$/.test(
                 id,
               )
             )

@@ -188,7 +188,7 @@ export default function Settings({
             )}
           </Form>
           <div className="settings-footer-link">
-            <span>Need to update your play areas, pricing or photos?</span>
+            <span>Need to update your play areas, templates or photos?</span>
             <Link to="/venue">Manage venue →</Link>
           </div>
         </>

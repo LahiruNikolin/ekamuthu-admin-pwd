@@ -79,7 +79,7 @@ export default function OperatorVenue({
         <h3>Choose a venue to manage</h3>
         <p>
           Select an individual venue in Settings to manage its play areas and
-          pricing.
+          templates.
         </p>
         <Link className="operator-action" to="/settings">
           Open settings
@@ -100,12 +100,12 @@ export default function OperatorVenue({
       <header className="venue-page-heading">
         <p className="week-eyebrow">VENUE MANAGEMENT</p>
         <h2>Make your venue work for you</h2>
-        <p>Manage your spaces, schedule and player experience.</p>
+        <p>Manage your spaces, templates and player experience.</p>
       </header>
       <nav className="venue-tools" aria-label="Venue management">
         {[
           ["/areas", "Play areas", "Courts, spaces & visibility", "▦"],
-          ["/templates", "Schedules & pricing", "Opening hours & rates", "◷"],
+          ["/templates", "Price templates", "Opening hours & rates", "◷"],
           ["/closures", "Shutdowns", "Holidays & maintenance", "⊘"],
           ["/photos", "Photos", "Your venue’s first impression", "▧"],
           ["/promotions", "Promotions", "Special prices & offers", "%"],
