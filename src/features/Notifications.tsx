@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   useData,
@@ -9,7 +9,8 @@ import {
   Load,
   type RecordData,
 } from "./shared";
-import { colomboDateKey } from "@/operator/date";
+import { addDays, colomboDateKey, displayTime } from "@/operator/date";
+import { fullDate, Pagination } from "@/operator/presentation";
 import type { OperatorContextValue } from "@/operator/types";
 export default function Notifications({
   courts,
@@ -79,59 +80,129 @@ export default function Notifications({
   }
   return (
     <Page title="Notifications" backTo="/account" backLabel="Account">
-      <label>
-        <input
-          type="checkbox"
-          checked={unread}
-          onChange={(e) => {
-            setUnread(e.target.checked);
-            setOffset(0);
-          }}
-        />
-        Unread only
-      </label>
+      <div className="feed-toolbar">
+        <div
+          className="feed-tabs"
+          role="group"
+          aria-label="Notification filter"
+        >
+          {[false, true].map((value) => (
+            <button
+              key={String(value)}
+              aria-pressed={unread === value}
+              onClick={() => {
+                setUnread(value);
+                setOffset(0);
+              }}
+            >
+              {value ? "Unread" : "All updates"}
+            </button>
+          ))}
+        </div>
+        <button
+          className="text-action"
+          disabled={action.busy || !items.length}
+          onClick={() =>
+            void action.run(
+              () => adminApi.patch("/notifications/read-all"),
+              "All notifications marked read",
+            )
+          }
+        >
+          Mark all read
+        </button>
+      </div>
       <Load query={query} />
       {openId && <Load query={direct} />}
       {action.feedback}
-      <button
-        className="operator-action"
-        disabled={action.busy || !items.length}
-        onClick={() =>
-          void action.run(
-            () => adminApi.patch("/notifications/read-all"),
-            "All notifications marked read",
-          )
-        }
-      >
-        Mark all read
-      </button>
-      {items.map((n: RecordData) => (
-        <button
-          className="feature-card"
-          key={n.id}
-          style={{ textAlign: "left" }}
-          onClick={() => void open(n)}
-        >
-          <strong>
-            {!n.read_at ? "● " : ""}
-            {n.payload?.title || n.type.replace(/([a-z])([A-Z])/g, "$1 $2")}
-          </strong>
-          <p>{n.payload?.body}</p>
-          <small>{new Date(n.created_at).toLocaleString()}</small>
-        </button>
-      ))}
-      {!query.isLoading && !query.isError && items.length === 0 && <EmptyState title={unread ? "You’re all caught up" : "No notifications yet"}>{unread ? "There are no unread updates. Turn off the filter to see previous notifications." : "Booking updates and venue activity will appear here."}</EmptyState>}
-      <div className="actions">
-        <button disabled={!offset} onClick={() => setOffset(offset - 20)}>
-          Previous
-        </button>
-        <button
-          disabled={!query.data?.has_more}
-          onClick={() => setOffset(query.data?.next_offset ?? offset + 20)}
-        >
-          Next
-        </button>
+      <div className="notification-feed" aria-busy={action.busy}>
+        {items.map((n: RecordData, i: number) => {
+          const zone =
+            courts.find((c) => c.id === n.payload?.court_id)?.timezone ||
+            "Asia/Colombo";
+          const day = colomboDateKey(new Date(n.created_at), zone);
+          const today = colomboDateKey(new Date(), zone);
+          const previous = items[i - 1];
+          const newDay =
+            !previous ||
+            colomboDateKey(
+              new Date(previous.created_at),
+              courts.find((c) => c.id === previous.payload?.court_id)
+                ?.timezone || "Asia/Colombo",
+            ) !== day;
+          const title =
+            n.payload?.title || n.type.replace(/([a-z])([A-Z])/g, "$1 $2");
+          const cancelled = /Cancelled|Released|NoShow/.test(n.type);
+          return (
+            <Fragment key={n.id}>
+              {newDay && (
+                <h3 className="feed-day">
+                  {day === today
+                    ? "Today"
+                    : day === addDays(today, -1)
+                      ? "Yesterday"
+                      : fullDate(n.created_at, zone)}
+                </h3>
+              )}
+              <button
+                className={`notification-row ${!n.read_at ? "is-unread" : ""}`}
+                disabled={action.busy}
+                onClick={() => void open(n)}
+              >
+                <span
+                  className={`notification-symbol ${cancelled ? "is-alert" : ""}`}
+                  aria-hidden="true"
+                >
+                  {cancelled ? "!" : "↗"}
+                </span>
+                <span className="notification-content">
+                  <span className="notification-title">
+                    {title}
+                    {!n.read_at && (
+                      <span
+                        className="unread-dot"
+                        role="img"
+                        aria-label="Unread"
+                      />
+                    )}
+                  </span>
+                  {n.payload?.body && (
+                    <span className="notification-body">{n.payload.body}</span>
+                  )}
+                  <time
+                    dateTime={n.created_at}
+                    title={`${fullDate(n.created_at, zone)} · ${zone}`}
+                  >
+                    {displayTime(n.created_at, zone)}
+                  </time>
+                </span>
+                <span className="row-chevron" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+            </Fragment>
+          );
+        })}
       </div>
+      {!query.isLoading && !query.isError && items.length === 0 && (
+        <EmptyState
+          title={unread ? "You’re all caught up" : "No notifications yet"}
+        >
+          {unread
+            ? "There are no unread updates. Select All updates to see previous notifications."
+            : "Booking updates and venue activity will appear here."}
+        </EmptyState>
+      )}
+      <Pagination
+        offset={offset}
+        size={20}
+        more={
+          Array.isArray(query.data)
+            ? items.length === 20
+            : !!query.data?.has_more
+        }
+        set={setOffset}
+      />
     </Page>
   );
 }

@@ -13,6 +13,7 @@ import {
   type RecordData,
 } from "./shared";
 import { logout } from "@/lib/auth";
+import { Avatar } from "@/operator/presentation";
 export default function Account() {
   const profile = useData<RecordData>("/users/me");
   const action = useAction();
@@ -25,20 +26,48 @@ export default function Account() {
     <Page title="Account" backTo="/" backLabel="Dashboard">
       <Load query={profile} />
       {profile.data && (
-        <article className="feature-card">
-          <h3>{profile.data.name}</h3>
-          <p>
-            {profile.data.email} · {profile.data.role === "sys_admin" ? "System administrator" : "Court administrator"}
-          </p>
+        <article className="feature-card account-profile">
+          <Avatar name={profile.data.name} />
+          <div>
+            <h3>{profile.data.name}</h3>
+            <p>{profile.data.email}</p>
+            <span className="account-role">
+              {profile.data.role === "sys_admin"
+                ? "System administrator"
+                : "Court administrator"}
+            </span>
+          </div>
         </article>
       )}
       {action.feedback}
-      <nav className="actions">
-        <Link to="/notifications">Notifications</Link>
-        <Link to="/settings">Venue settings</Link>
-        <Link to="/promotions">Promotions</Link>
-        <Link to="/privacy">Privacy policy</Link>
-        <Link to="/terms">Terms of service</Link>
+      <nav className="account-links" aria-label="Account and preferences">
+        <Link to="/notifications">
+          <span>
+            <strong>Notifications</strong>
+            <small>Booking updates and activity</small>
+          </span>
+          <span aria-hidden="true">›</span>
+        </Link>
+        <Link to="/settings">
+          <span>
+            <strong>Venue settings</strong>
+            <small>Switch venues and manage preferences</small>
+          </span>
+          <span aria-hidden="true">›</span>
+        </Link>
+        <Link to="/promotions">
+          <span>
+            <strong>Promotions</strong>
+            <small>Offers for your players</small>
+          </span>
+          <span aria-hidden="true">›</span>
+        </Link>
+        <Link to="/privacy">
+          Privacy policy <span aria-hidden="true">›</span>
+        </Link>
+        <Link to="/terms">
+          Terms of service <span aria-hidden="true">›</span>
+        </Link>
       </nav>
       <BrowserPush />
       <details>

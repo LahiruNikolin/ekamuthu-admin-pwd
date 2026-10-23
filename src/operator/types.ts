@@ -58,6 +58,8 @@ export interface OperatorAnalytics {
 }
 
 export interface OperatorGame {
+  court_name?: string;
+  flagged_player_count?: number;
   id: string;
   status: string;
   starts_at: string;

@@ -78,7 +78,8 @@ export function useAction() {
   };
 }
 const pageDescriptions: Record<string, string> = {
-  "New template": "Set your venue’s opening hours and pricing, ready to apply when you choose.",
+  "New template":
+    "Set your venue’s opening hours and pricing, ready to apply when you choose.",
   "Edit template": "Review opening hours and prices before applying changes.",
   "Play areas":
     "Manage the individual courts and spaces players can book at your venue.",
@@ -222,15 +223,21 @@ export function Select({
   value,
   set,
   options,
+  required,
 }: {
   label: string;
   value: string;
   set: (v: string) => void;
   options: { id: string; name: string }[];
+  required?: boolean;
 }) {
   return (
     <Field label={label}>
-      <select value={value} onChange={(e) => set(e.target.value)}>
+      <select
+        required={required}
+        value={value}
+        onChange={(e) => set(e.target.value)}
+      >
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.name}
@@ -332,8 +339,7 @@ export function Contact({ phone, name }: { phone?: string; name?: string }) {
 export const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
   (name, i) => ({ id: String(i + 1), name }),
 );
-export const statusLabel = (value: string) =>
-  value === "confirmed" ? "Upcoming" : value?.replaceAll("_", " ");
+export { statusLabel } from "@/operator/presentation";
 
 export function changeSummary(prefix: string, result: RecordData = {}) {
   const fields: [string, string][] = [

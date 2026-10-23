@@ -15,8 +15,19 @@ import {
   statusLabel,
   type RecordData,
 } from "./shared";
-import type { OperatorContextValue, OperatorCourt } from "@/operator/types";
-import { displayTime } from "@/operator/date";
+import type {
+  OperatorContextValue,
+  OperatorCourt,
+  OperatorGame,
+} from "@/operator/types";
+import { colomboDateKey, displayTime } from "@/operator/date";
+import {
+  Avatar,
+  fullDate,
+  GameRow,
+  Pagination,
+  StatusBadge,
+} from "@/operator/presentation";
 export default function Games({
   selectedCourtId,
   selectedCourt,
@@ -49,70 +60,61 @@ function GameList({
   const [status, setStatus] = useState("");
   const [date, setDate] = useState("");
   const [offset, setOffset] = useState(0);
-  const query = useData(
+  const query = useData<OperatorGame[]>(
     `/admin/games?court_id=${courtId}&status=${status}&date=${date}&limit=25&offset=${offset}`,
   );
   return (
     <Page title="Games" backTo="/" backLabel="Dashboard">
-      <Select
-        label="Status"
-        value={status}
-        set={(v) => {
-          setStatus(v);
-          setOffset(0);
-        }}
-        options={[
-          "",
-          "confirmed",
-          "ongoing",
-          "completed",
-          "cancelled",
-          "no_show",
-        ].map((id) => ({ id, name: id ? statusLabel(id) : "All statuses" }))}
-      />
-      <Input
-        label="Date (optional)"
-        type="date"
-        value={date}
-        set={(v) => {
-          setDate(v);
-          setOffset(0);
-        }}
-      />
-      <Load query={query} />
-      {query.data?.map((g) => {
-        const venueZone =
-          courts.find((c) => c.id === g.court_id)?.timezone || timeZone;
-        return (
-          <Link className="feature-card" key={g.id} to={`/games/${g.id}`}>
-            <strong>
-              {g.court_name || "Game"} · {statusLabel(g.status)}
-            </strong>
-            <p>
-              {new Date(g.starts_at).toLocaleDateString("en", {
-                timeZone: venueZone,
-              })}{" "}
-              · {displayTime(g.starts_at, venueZone)}
-            </p>
-            <span>
-              {g.player_count ?? g.accepted_players ?? 0}/{g.max_players}{" "}
-              players
-            </span>
-          </Link>
-        );
-      })}
-      {!query.isLoading && !query.isError && query.data?.length === 0 && <EmptyState title="No games in this view">Try a different status or date range to find a game.</EmptyState>}
-      <div className="actions">
-        <button disabled={!offset} onClick={() => setOffset(offset - 25)}>
-          Previous
-        </button>
-        <button
-          disabled={(query.data?.length ?? 0) < 25}
-          onClick={() => setOffset(offset + 25)}
-        >
-          Next
-        </button>
+      <div className="filter-panel">
+        <Select
+          label="Status"
+          value={status}
+          set={(v) => {
+            setStatus(v);
+            setOffset(0);
+          }}
+          options={[
+            "",
+            "confirmed",
+            "ongoing",
+            "completed",
+            "cancelled",
+            "no_show",
+          ].map((id) => ({ id, name: id ? statusLabel(id) : "All statuses" }))}
+        />
+        <Input
+          label="Date (optional)"
+          type="date"
+          value={date}
+          set={(v) => {
+            setDate(v);
+            setOffset(0);
+          }}
+        />
       </div>
+      <Load query={query} />
+      <div className="game-list">
+        {query.data?.map((g) => (
+          <GameRow
+            key={g.id}
+            game={g}
+            timeZone={
+              courts.find((c) => c.id === g.court_id)?.timezone || timeZone
+            }
+          />
+        ))}
+      </div>
+      {!query.isLoading && !query.isError && query.data?.length === 0 && (
+        <EmptyState title="No games in this view">
+          Try a different status or date range to find a game.
+        </EmptyState>
+      )}
+      <Pagination
+        offset={offset}
+        size={25}
+        more={(query.data?.length ?? 0) === 25}
+        set={setOffset}
+      />
     </Page>
   );
 }
@@ -134,119 +136,195 @@ function Game({
   const timeZone =
     courts.find((c) => c.id === g?.court_id)?.timezone || fallbackZone;
   return (
-    <Page title="Game details">
-      <Link to="/games">All games</Link>
+    <Page title="Game details" backTo="/games" backLabel="Games">
       <Load query={query} />
       {action.feedback}
       {g && (
         <>
-          <article className="feature-card">
-            <h3>
-              {g.court_name} · {statusLabel(g.status)}
-            </h3>
-            <p>
-              {new Date(g.starts_at).toLocaleDateString("en", { timeZone })} ·{" "}
+          <article className="game-summary">
+            <div className="section-heading">
+              <span className="section-eyebrow">PLAYER GAME</span>
+              <StatusBadge status={g.status} />
+            </div>
+            <h3>{g.court_name || "Game"}</h3>
+            <p className="game-start-time">
               {displayTime(g.starts_at, timeZone)}
+              <span>Start time · {timeZone}</span>
             </p>
-            <Contact name={g.creator_name} phone={g.creator_phone} />
+            <p>{fullDate(g.starts_at, timeZone)}</p>
+            <Link
+              className="inline-link"
+              to={`/calendar?date=${colomboDateKey(new Date(g.starts_at), timeZone)}&courtId=${g.court_id}`}
+            >
+              View in calendar →
+            </Link>
             {g.cancellation_reason && (
-              <p>Cancellation: {g.cancellation_reason}</p>
+              <div className="attention-note">
+                <strong>Cancellation reason</strong>
+                <p>{g.cancellation_reason}</p>
+              </div>
             )}
           </article>
-          <h3>
-            Players ({g.players?.length || 0}/{g.max_players})
-          </h3>
-          {g.players?.map((p: RecordData) => (
-            <article className="feature-card" key={p.user_id}>
-              <Link
-                to={`/players/${p.user_id}?name=${encodeURIComponent(p.name)}`}
-              >
-                {p.name} @{p.username}
-              </Link>
-              <p>
-                {p.role} · {p.status} · {p.strike_count} strikes
-              </p>
-            </article>
-          ))}
-          {["confirmed", "ongoing"].includes(g.status) && (
-            <Form
-              busy={action.busy}
-              label="Cancel game"
-              onSubmit={async () => {
-                if (await confirm("Cancel this game and notify players?"))
-                  void action.run(
-                    () =>
-                      adminApi.patch(`/admin/games/${gameId}/cancel`, {
-                        reason,
-                      }),
-                    "Game cancelled",
-                  );
-              }}
-            >
-              <Input
-                label="Cancellation reason"
-                value={reason}
-                set={setReason}
-                required
+          <section className="surface-section">
+            <header className="section-heading">
+              <h3>Game organiser</h3>
+            </header>
+            <div className="organiser-contact">
+              <Avatar name={g.creator_name} />
+              <Contact
+                name={g.creator_name || "Organiser"}
+                phone={g.creator_phone}
               />
-            </Form>
+            </div>
+          </section>
+          <section className="surface-section">
+            <header className="section-heading">
+              <div>
+                <h3>Players</h3>
+                <p>
+                  {
+                    (g.players || []).filter(
+                      (p: RecordData) => p.status === "accepted",
+                    ).length
+                  }{" "}
+                  accepted · Up to {g.max_players}{" "}
+                  {g.max_players === 1 ? "player" : "players"}
+                </p>
+              </div>
+            </header>
+            <div className="people-list">
+              {g.players?.map((p: RecordData) => (
+                <Link
+                  className="person-row"
+                  key={p.user_id}
+                  to={`/players/${p.user_id}?name=${encodeURIComponent(p.name)}`}
+                >
+                  <Avatar name={p.name} />
+                  <div>
+                    <strong>{p.name}</strong>
+                    {p.username && <span>@{p.username}</span>}
+                    <span>
+                      {statusLabel(p.role)} · {statusLabel(p.status)}
+                    </span>
+                    {p.strike_count > 0 && (
+                      <span className="attention-note">
+                        {p.strike_count} strikes
+                      </span>
+                    )}
+                  </div>
+                  <span className="row-chevron" aria-hidden="true">
+                    ›
+                  </span>
+                </Link>
+              ))}
+            </div>
+            {!g.players?.length && (
+              <p className="operator-muted">
+                No players have joined this game.
+              </p>
+            )}
+          </section>
+          {["confirmed", "ongoing"].includes(g.status) && (
+            <details className="management-panel">
+              <summary>Cancel game</summary>
+              <p className="supporting-copy">
+                Players will be notified and the booked time will be released.
+              </p>
+              <div className="destructive-form">
+                <Form
+                  busy={action.busy}
+                  label="Cancel game"
+                  onSubmit={async () => {
+                    if (await confirm("Cancel this game and notify players?"))
+                      void action.run(
+                        () =>
+                          adminApi.patch(`/admin/games/${gameId}/cancel`, {
+                            reason,
+                          }),
+                        "Game cancelled",
+                      );
+                  }}
+                >
+                  <Input
+                    label="Cancellation reason"
+                    value={reason}
+                    set={setReason}
+                    required
+                  />
+                </Form>
+              </div>
+            </details>
           )}
           {["ongoing", "completed"].includes(g.status) && (
-            <button
-              className="operator-action danger"
-              disabled={action.busy}
-              onClick={async () => {
-                if (await confirm("Mark this game as no-show?"))
-                  void action.run(
-                    () =>
-                      adminApi.patch(`/admin/games/${gameId}/status`, {
-                        status: "no_show",
-                      }),
-                    "Marked no-show",
-                  );
-              }}
-            >
-              Mark no-show
-            </button>
+            <details className="management-panel">
+              <summary>Report a no-show</summary>
+              <p className="supporting-copy">
+                Use this when the game’s players did not attend.
+              </p>
+              <button
+                className="operator-action danger"
+                disabled={action.busy}
+                onClick={async () => {
+                  if (await confirm("Mark this game as no-show?"))
+                    void action.run(
+                      () =>
+                        adminApi.patch(`/admin/games/${gameId}/status`, {
+                          status: "no_show",
+                        }),
+                      "Marked no-show",
+                    );
+                }}
+              >
+                Mark no-show
+              </button>
+            </details>
           )}
           {["completed", "no_show"].includes(g.status) && (
-            <Form
-              busy={action.busy}
-              label="Issue strike"
-              onSubmit={async () => {
-                if (
-                  player &&
-                  await confirm("Issue this strike to the selected player?")
-                )
-                  void action.run(
-                    () =>
-                      adminApi.post(`/admin/games/${gameId}/strikes`, {
-                        user_id: player,
-                        reason: strike,
-                      }),
-                    "Strike issued",
-                  );
-              }}
-            >
-              <Select
-                label="Player"
-                value={player}
-                set={setPlayer}
-                options={[
-                  { id: "", name: "Select player" },
-                  ...(g.players || []).map((p: RecordData) => ({
-                    id: p.user_id,
-                    name: p.name,
-                  })),
-                ]}
-              />
-              <Input
-                label="Strike reason"
-                value={strike}
-                set={setStrike}
-                required
-              />
-            </Form>
+            <details className="management-panel">
+              <summary>Issue a player strike</summary>
+              <p className="supporting-copy">
+                Choose the player and explain what happened. The strike will be
+                added to their record.
+              </p>
+              <Form
+                busy={action.busy}
+                label="Issue strike"
+                onSubmit={async () => {
+                  if (
+                    player &&
+                    (await confirm("Issue this strike to the selected player?"))
+                  )
+                    void action.run(
+                      () =>
+                        adminApi.post(`/admin/games/${gameId}/strikes`, {
+                          user_id: player,
+                          reason: strike,
+                        }),
+                      "Strike issued",
+                    );
+                }}
+              >
+                <Select
+                  label="Player"
+                  required
+                  value={player}
+                  set={setPlayer}
+                  options={[
+                    { id: "", name: "Select player" },
+                    ...(g.players || []).map((p: RecordData) => ({
+                      id: p.user_id,
+                      name: p.name,
+                    })),
+                  ]}
+                />
+                <Input
+                  label="Strike reason"
+                  value={strike}
+                  set={setStrike}
+                  required
+                />
+              </Form>
+            </details>
           )}
         </>
       )}

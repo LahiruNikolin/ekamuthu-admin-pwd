@@ -1,55 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import type React from "react";
-import {
-  Link,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  BarChart3,
-  Bell,
-  Building2,
-  CalendarDays,
-  ChevronDown,
-  Home,
-  LogOut,
-  Menu,
-  Search,
-  Settings,
-  Users,
-} from "lucide-react";
-import { toast } from "@/Toast";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { adminApi } from "@/api/client";
-import { decodeAuth, logout, refreshWebSession } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-import {
-  addDays,
-  colomboDateKey,
-  displayDate,
-  displayTime,
-  monthBounds,
-} from "./date";
-import type {
-  OperatorAnalytics,
-  OperatorCalendarBlock,
-  OperatorCourt,
-  OperatorGame,
-  OperatorNotification,
-  OperatorPlayArea,
-} from "./types";
-
-import type { OperatorContextValue } from "./types";
-import {
-  MetricCard,
-  Panel,
-  OperatorListSkeleton,
-  CalendarSkeleton,
-  QueryError,
-} from "./ui";
+import { OperatorListSkeleton, QueryError } from "./ui";
+import { Avatar } from "./presentation";
 export default function OperatorPlayers() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -71,48 +26,64 @@ export default function OperatorPlayers() {
     enabled: search.length >= 2,
   });
   const users = usersQuery.data ?? [];
-
-  if (usersQuery.isError) return <QueryError />;
-
   return (
-    <section className="operator-page">
+    <section className="operator-page directory-page">
+      <header className="overview-heading">
+        <p className="section-eyebrow">YOUR COMMUNITY</p>
+        <h2>Players</h2>
+        <p>Find a player and review their record.</p>
+      </header>
       <label className="operator-search">
-        <Search size={18} />
+        <Search size={18} aria-hidden="true" />
         <input
+          aria-label="Search players"
+          type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search players"
+          placeholder="Search by name or username"
         />
       </label>
-      <Panel title="Players" icon={<Users size={18} />}>
-        {usersQuery.isLoading ? (
+      <section className="surface-section" aria-label="Player search results">
+        {usersQuery.isError ? (
+          <QueryError retry={() => void usersQuery.refetch()} />
+        ) : usersQuery.isFetching ? (
           <OperatorListSkeleton />
+        ) : search.length < 2 ? (
+          <div className="quiet-state">
+            <strong>Who are you looking for?</strong>
+            <p>Enter at least two characters to search for a player.</p>
+          </div>
         ) : users.length === 0 ? (
-          <p className="operator-muted">
-            {search.length < 2
-              ? "Enter at least two characters to search."
-              : "No matching players found."}
-          </p>
+          <div className="quiet-state">
+            <strong>No matching players</strong>
+            <p>Try another name or username.</p>
+          </div>
         ) : (
-          <div className="operator-list">
+          <div className="people-list">
             {users.map((user) => (
-              <div key={user.id} className="operator-list-row">
+              <Link
+                className="person-row"
+                key={user.id}
+                to={`/players/${user.id}?name=${encodeURIComponent(user.name)}`}
+              >
+                <Avatar name={user.name} />
                 <div>
-                  <Link
-                    to={`/players/${user.id}?name=${encodeURIComponent(user.name)}`}
-                  >
-                    {user.name}
-                  </Link>
+                  <strong>{user.name}</strong>
                   <span>@{user.username}</span>
+                  {!!user.strike_count && (
+                    <span className="attention-note">
+                      {user.strike_count} strikes
+                    </span>
+                  )}
                 </div>
-                <span className="operator-pill">
-                  {user.strike_count ?? 0} strikes
+                <span className="row-chevron" aria-hidden="true">
+                  ›
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         )}
-      </Panel>
+      </section>
     </section>
   );
 }

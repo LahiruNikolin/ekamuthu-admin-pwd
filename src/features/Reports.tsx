@@ -83,35 +83,43 @@ export default function Reports({
         }
     : {};
   return (
-    <Page title="Analytics report">
-      <Select
-        label="Period"
-        value={range}
-        set={setRange}
-        options={[
-          { id: "today", name: "Today" },
-          { id: "this_month", name: "This month" },
-          { id: "last_month", name: "Last month" },
-          { id: "all_time", name: "All time" },
-          { id: "custom", name: "Custom range" },
-        ]}
-      />
-      {range === "custom" && (
-        <>
-          <Input label="From" type="date" value={start} set={setStart} />
-          <Input label="To" type="date" min={start} value={end} set={setEnd} />
-        </>
-      )}
+    <Page title="Analytics report" backTo="/" backLabel="Dashboard">
+      <div className="filter-panel">
+        <Select
+          label="Period"
+          value={range}
+          set={setRange}
+          options={[
+            { id: "today", name: "Today" },
+            { id: "this_month", name: "This month" },
+            { id: "last_month", name: "Last month" },
+            { id: "all_time", name: "All time" },
+            { id: "custom", name: "Custom range" },
+          ]}
+        />
+        {range === "custom" && (
+          <>
+            <Input label="From" type="date" value={start} set={setStart} />
+            <Input
+              label="To"
+              type="date"
+              min={start}
+              value={end}
+              set={setEnd}
+            />
+          </>
+        )}
+      </div>
       {!validRange && <p role="alert">Choose a valid start and end date.</p>}
       <Load query={query} />
       <button
-        className="operator-action"
+        className="operator-action report-refresh"
         disabled={!validRange}
         onClick={() => void query.refetch()}
       >
         Refresh report
       </button>
-      <div className="operator-grid two">
+      <div className="operator-grid two report-metrics">
         {Object.entries(metrics).map(([label, value]) => (
           <article className="operator-metric" key={label}>
             <span>{label}</span>
@@ -120,7 +128,7 @@ export default function Reports({
         ))}
       </div>
       {d && (
-        <section className="feature-card">
+        <section className="feature-card report-statuses">
           <h3>Games by status</h3>
           {Object.entries(d.games_by_status as Record<string, number>).map(
             ([status, count]) => (

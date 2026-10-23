@@ -301,9 +301,11 @@ try {
   );
   // Game no-show + strike.
   await goto("/games/g1");
+  await page.getByText("Report a no-show", { exact: true }).click();
   await page.getByRole("button", { name: "Mark no-show", exact: true }).click();
   await confirmPending();
   assert.equal((await wait("/admin/games/g1/status")).status, "no_show");
+  await page.getByText("Issue a player strike", { exact: true }).click();
   await page.getByLabel("Player", { exact: true }).selectOption("p1");
   await page.getByLabel("Strike reason").fill("Absent");
   await page.getByRole("button", { name: "Issue strike" }).click();
@@ -468,6 +470,7 @@ try {
   await wait("/admin/flexible-reservations/b1/outcome");
   game.status = "confirmed";
   await goto("/games/g1");
+  await page.getByText("Cancel game", { exact: true }).first().click();
   await page.getByLabel("Cancellation reason").fill("Venue issue");
   await page.getByRole("button", { name: "Cancel game", exact: true }).click();
   await confirmPending();

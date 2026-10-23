@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     build: {
+      target: "es2022",
       minify: "terser",
       manifest: true,
       rollupOptions: {
@@ -29,10 +30,9 @@ export default defineConfig(({ mode }) => {
               )
             )
               return "calendar";
-            if (/\/src\/features\/(Booking|Games)\.tsx$/.test(id))
-              return "bookings";
+            if (/\/src\/features\/Booking\.tsx$/.test(id)) return "bookings";
             if (
-              /\/src\/features\/(Player|Notifications|Reports|Account|BrowserPush)\.tsx$/.test(
+              /\/src\/features\/(Games|Player|Notifications|Reports|Account|BrowserPush)\.tsx$/.test(
                 id,
               )
             )

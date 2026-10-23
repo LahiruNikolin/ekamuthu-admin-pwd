@@ -206,6 +206,9 @@ function OperatorShell() {
   }, [client]);
   const ctx = useOperatorContext();
   const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   const unread = useQuery({
     queryKey: ["unread-notifications"],
     queryFn: () =>
@@ -216,6 +219,7 @@ function OperatorShell() {
     refetchIntervalInBackground: false,
   });
 
+  const unreadCount = unread.data?.total ?? unread.data?.items?.length ?? 0;
   if (ctx.courtsLoading) return <OperatorBootScreen title="Opening venue" />;
 
   return (
@@ -230,11 +234,15 @@ function OperatorShell() {
         </div>
         <Link
           to="/notifications"
-          className="operator-icon-button"
-          aria-label={`Notifications (${unread.data?.total ?? unread.data?.items?.length ?? 0} unread)`}
+          className="operator-icon-button notification-trigger"
+          aria-label={`Notifications (${unreadCount} unread)`}
         >
           <Bell size={21} />
-          {unread.data?.total || ""}
+          {unreadCount > 0 && (
+            <span className="notification-count" aria-hidden="true">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </Link>
         <Link
           to="/account"
