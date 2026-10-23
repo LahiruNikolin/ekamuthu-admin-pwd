@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs && node scripts/check-performance.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/build-sw.mjs && node scripts/check-performance.mjs && node scripts/build-vercel.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser-smoke.mjs",

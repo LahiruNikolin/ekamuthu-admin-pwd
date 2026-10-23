@@ -59,7 +59,7 @@ The API accepts admin-owned browser subscriptions; the worker queues and retries
 
 ## Vercel
 
-This standalone repository uses root directory `./`. The checked-in `vercel.mjs` selects Vite, runs `npm ci` and `npm run build`, and publishes `dist`. Select **Vite** in the import screen if it still shows Other; keep output directory `dist` and build command `npm run build`.
+This standalone repository uses root directory `./`. The checked-in `vercel.json` selects Vite and runs `npm ci` and `npm run build`. After building `dist`, `scripts/build-vercel.mjs` reads `PROD` and emits static files plus literal routes under `.vercel/output` using Vercel’s Build Output API v3. This avoids computed rewrite destinations during project configuration validation. The local `dist` output remains available for Vite preview. Select **Vite** in the import screen if it still shows Other; keep output directory `dist` and build command `npm run build`.
 
 Set **PROD** in each Vercel project's Environment Variables, then redeploy:
 
