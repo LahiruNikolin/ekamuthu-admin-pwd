@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import useCalendarZoom from "./useCalendarZoom";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { slotIsEmpty, slotRange } from "./calendarSlot";
 import {
   addDays,
   colomboDateKey,
@@ -30,6 +31,7 @@ type Entry = {
   column: number;
   columns: number;
   zone: string;
+  cancelled: boolean;
 };
 const minute = (value: string) =>
   Number(value.slice(11, 13)) * 60 + Number(value.slice(14, 16));
@@ -46,6 +48,7 @@ export default function WeekTimeline({
   areas,
   onSelectDay,
   onOpenBooking,
+  onCreateBooking,
 }: {
   start: string;
   blocks: OperatorCalendarBlock[];
@@ -53,8 +56,11 @@ export default function WeekTimeline({
   areas: CourtArea[];
   onSelectDay?: (day: string) => void;
   onOpenBooking?: (booking: CalendarBooking) => void;
+  onCreateBooking?: () => void;
 }) {
+  const navigate = useNavigate();
   const viewport = useRef<HTMLDivElement>(null);
+  const press = useRef({ x: 0, y: 0 });
   const [scroll, setScroll] = useState({
     top: 8 * baseHourHeight,
     left: 0,
@@ -141,6 +147,7 @@ export default function WeekTimeline({
             column: 0,
             columns: 1,
             zone,
+            cancelled: isCalendarCancelled(block),
           });
       });
     }
@@ -232,8 +239,7 @@ export default function WeekTimeline({
         ))}
       </nav>
       <p className="weekly-time-hint">
-        Pinch with two fingers to zoom. Swipe across play areas; tap a date to
-        jump between days.
+        Tap an empty time to book. Pinch to zoom.
       </p>
       {resources.length === 0 ? (
         <p className="week-empty">No play areas available.</p>
@@ -244,10 +250,18 @@ export default function WeekTimeline({
           role="region"
           aria-label="Weekly booking timeline with play-area columns inside each day"
           tabIndex={0}
+          onPointerDownCapture={(e) => {
+            press.current = { x: e.clientX, y: e.clientY };
+          }}
           onClickCapture={(event) => {
             if (
               Date.now() <
-              Number(event.currentTarget.dataset.zoomClickUntil || 0)
+              Number(event.currentTarget.dataset.zoomClickUntil || 0) ||
+              (event.detail > 0 &&
+                Math.hypot(
+                  event.clientX - press.current.x,
+                  event.clientY - press.current.y,
+                ) > 8)
             ) {
               event.preventDefault();
               event.stopPropagation();
@@ -322,13 +336,53 @@ export default function WeekTimeline({
                 ))}
               </div>
               <div className="weekly-time-days nested-time-lanes">
-                {visibleLanes.map((lane) => (
+                {visibleLanes.map((lane) => {
+                  const step =
+                    lane.area.court.allow_half_hour_bookings === false ? 60 : 30;
+                  const first = Math.floor(firstMinute / step),
+                    last = Math.min(1440 / step, Math.ceil(lastMinute / step));
+                  return (
                   <div
                     className={`weekly-time-day nested-time-lane ${lane.index % resources.length === 0 ? "is-day-start" : ""}`}
                     key={`${lane.day}-${lane.area.court.id}-${lane.area.id}`}
                     style={{ left: lane.index * laneWidth, width: laneWidth }}
                     aria-label={`${lane.day}, ${lane.area.name}`}
                   >
+                    {areas.includes(lane.area) &&
+                      lane.area.booking_mode !== "slot_based" &&
+                      Array.from(
+                        { length: last - first },
+                        (_, i) => (first + i) * step,
+                      )
+                        .filter((from) =>
+                          slotIsEmpty(from, step, indexed[lane.index]),
+                        )
+                        .map((from) => {
+                          const range = slotRange(lane.day, from, step);
+                          const label = `New booking · ${lane.area.court.name} · ${lane.area.name} · ${lane.day} · ${range.start.slice(11)}–${range.end.slice(11)}`;
+                          return (<button
+                            type="button"
+                            key={from}
+                            className="weekly-time-slot"
+                            style={{
+                              top: (from / 60) * hourHeight,
+                              height: (step / 60) * hourHeight,
+                            }}
+                            aria-label={label}
+                            title={label}
+                            onClick={() => {
+                              onCreateBooking?.();
+                              navigate(`/bookings/new?${new URLSearchParams({
+                                courtId: lane.area.court.id,
+                                playAreaId: lane.area.id,
+                                date: lane.day,
+                                ...range,
+                              })}`);
+                            }}
+                          >
+                            <span>＋ {range.start.slice(11)}</span>
+                          </button>);
+                        })}
                     {indexed[lane.index]
                       .filter((e) => e.to > firstMinute && e.from < lastMinute)
                       .map((e) => {
@@ -404,7 +458,8 @@ export default function WeekTimeline({
                         );
                       })}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

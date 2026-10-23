@@ -319,11 +319,11 @@ export function Form({
 export function Contact({ phone, name }: { phone?: string; name?: string }) {
   const digits = (phone || "").replace(/[^\d+]/g, "");
   return (
-    <div>
-      <strong>{name}</strong>
+    <div className="customer-contact">
+      <strong>{name}<small>{phone}</small></strong>
       {digits && (
         <p>
-          <a href={`tel:${digits}`}>Call {phone}</a> ·{" "}
+          <a href={`tel:${digits}`}>Call</a>
           <a
             href={`https://wa.me/${digits.replace("+", "")}`}
             target="_blank"

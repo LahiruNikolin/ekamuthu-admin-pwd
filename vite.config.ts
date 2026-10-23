@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
           onlyExplicitManualChunks: true,
           // Related lazy screens compress together without entering the login bundle.
           manualChunks(id) {
+            if (/\/src\/lib\/browser-push\.ts$/.test(id)) return "admin-tools";
             if (
               /\/src\/operator\/(OperatorDashboard|OperatorVenue|OperatorPlayers)\.tsx$/.test(
                 id,
@@ -26,7 +27,7 @@ export default defineConfig(({ mode }) => {
             )
               return "operator-views";
             if (
-              /\/src\/operator\/(OperatorCalendar|WeekTimeline|OperationsBoard|Timeline|BookingDialog|VirtualList|calendarVisibility|useCalendarZoom)\.(tsx?|jsx?)$/.test(
+              /\/src\/operator\/(OperatorCalendar|WeekTimeline|OperationsBoard|Timeline|BookingDialog|VirtualList|calendarVisibility|calendarSlot|useWeekCalendar|useCalendarZoom)\.(tsx?|jsx?)$/.test(
                 id,
               )
             )

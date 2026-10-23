@@ -62,17 +62,6 @@ export default function useCalendarZoom(
       worldY: (el.scrollTop + y - HEADER_HEIGHT) / currentZoom.current,
     };
   }
-  function zoomTo(value: number) {
-    const el = viewport.current;
-    if (!el) return;
-    pendingAnchor.current = anchorAt(
-      el,
-      (el.clientWidth + AXIS_WIDTH) / 2,
-      (el.clientHeight + HEADER_HEIGHT) / 2,
-    );
-    setZoom(clampZoom(value));
-  }
-
   useEffect(() => {
     const el = viewport.current;
     if (!el || !enabled) return;
@@ -159,12 +148,5 @@ export default function useCalendarZoom(
       el.removeEventListener("touchcancel", finish);
     };
   }, [enabled, viewport]);
-  return {
-    zoom,
-    zoomIn: () => zoomTo(currentZoom.current + 0.25),
-    zoomOut: () => zoomTo(currentZoom.current - 0.25),
-    resetZoom: () => zoomTo(1),
-    minZoom: MIN_ZOOM,
-    maxZoom: MAX_ZOOM,
-  };
+  return { zoom };
 }

@@ -34,6 +34,14 @@ import type { OperatorContextValue } from "@/operator/types";
 export default function Booking(ctx: OperatorContextValue) {
   const { bookingId } = useParams();
   const [params] = useSearchParams();
+  // Resolve deep links before the global venue preference effect runs.
+  const requestedCourt = ctx.courts.find((c) => c.id === params.get("courtId"));
+  if (requestedCourt)
+    ctx = {
+      ...ctx,
+      selectedCourtId: requestedCourt.id,
+      selectedCourt: requestedCourt,
+    };
   const date =
     params.get("date") ||
     colomboDateKey(new Date(), ctx.selectedCourt?.timezone || "Asia/Colombo");
@@ -52,7 +60,7 @@ export default function Booking(ctx: OperatorContextValue) {
           zone={ctx.selectedCourt?.timezone || "Asia/Colombo"}
         />
       ) : (
-        <BookingForm {...ctx} date={date} />
+        <BookingForm key={`${ctx.selectedCourtId}:${params}`} {...ctx} date={date} />
       )}
     </Page>
   );
@@ -138,8 +146,8 @@ function BookingForm({
       : [
           {
             play_area_id: search.get("playAreaId") || "",
-            start: `${date}T08:00`,
-            end: `${date}T09:00`,
+            start: search.get("start") || `${date}T08:00`,
+            end: search.get("end") || `${date}T09:00`,
           },
         ],
   );

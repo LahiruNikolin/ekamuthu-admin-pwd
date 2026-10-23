@@ -6,6 +6,7 @@ export interface OperatorCourt {
   sport_types?: string[];
   image_urls?: string[];
   is_active?: boolean;
+  allow_half_hour_bookings?: boolean;
 }
 
 export interface OperatorPlayArea {

@@ -2,7 +2,7 @@ import WeekTimeline from "./WeekTimeline";
 import BookingDialog, { type CalendarBooking } from "./BookingDialog";
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import useWeekCalendar from "./useWeekCalendar";
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,10 +10,8 @@ import {
   RefreshCw,
   Maximize2,
 } from "lucide-react";
-import { adminApi } from "@/api/client";
 import { addDays, colomboDateKey, displayDate, displayTime } from "./date";
 import {
-  calendarDisplayBlocks,
   calendarTone,
   isCalendarCancelled,
   isCalendarBlocked,
@@ -23,7 +21,6 @@ import VirtualList from "./VirtualList";
 import type {
   OperatorCalendarBlock,
   OperatorContextValue,
-  OperatorPlayArea,
 } from "./types";
 const OperationsBoard = lazy(() => import("./OperationsBoard"));
 
@@ -101,65 +98,13 @@ export default function OperatorCalendar({
       { replace: true },
     );
   }
-  const calendar = useQuery({
-    queryKey: [
-      "calendar-overview",
-      venues.map((c) => c.id).join(","),
-      start,
-      "week",
-    ],
-    queryFn: ({ signal }) =>
-      Promise.all(
-        venues.map(async (court) => {
-          try {
-            const [areas, blocks] = await Promise.all([
-              adminApi.get<OperatorPlayArea[]>(
-                `/courts/${court.id}/play-areas`,
-                signal,
-              ),
-              adminApi.get<OperatorCalendarBlock[]>(
-                `/admin/calendar/days?court_id=${court.id}&start_date=${start}&days=7`,
-                signal,
-              ),
-            ]);
-            return {
-              areas,
-              blocks: calendarDisplayBlocks(blocks),
-              court,
-              failed: false,
-            };
-          } catch (error) {
-            if (signal.aborted) throw error;
-            return {
-              areas: [] as OperatorPlayArea[],
-              blocks: [] as OperatorCalendarBlock[],
-              court,
-              failed: true,
-            };
-          }
-        }),
-      ),
-    enabled: !!venues.length,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    refetchIntervalInBackground: false,
-  });
+  const calendar = useWeekCalendar(venues, start);
   const loading = calendar.isLoading;
   const refreshing = calendar.isFetching;
   const data = calendar.data || [];
-  const areas = data.flatMap((d) =>
-    d.areas.map((a) => ({ ...a, court: d.court })),
-  );
+  const areas = calendar.areas;
   const visibleAreas = areas;
-  const blocks = data
-    .flatMap((d) =>
-      d.blocks.map((b) => ({
-        ...b,
-        court_id: d.court.id,
-        court_name: d.court.name,
-      })),
-    )
-    .filter((b) => b.status !== "available");
+  const blocks = calendar.blocks;
   const dates = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   // Index once by venue-local day and area. Overnight bookings appear on both days.
   const index = useMemo(() => {
