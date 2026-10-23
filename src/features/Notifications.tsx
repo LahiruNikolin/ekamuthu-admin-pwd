@@ -39,8 +39,9 @@ export default function Notifications({
   const items = Array.isArray(query.data)
     ? query.data
     : query.data?.items || [];
-  async function open(n: RecordData) {
-    await action.run(() => adminApi.patch(`/notifications/${n.id}/read`), "");
+  function open(n: RecordData) {
+    // A delayed read receipt must not hold up opening the game.
+    void action.run(() => adminApi.patch(`/notifications/${n.id}/read`), "");
     const p = n.payload || {};
     if (p.court_id) setSelectedCourtId(p.court_id);
     const game =
@@ -50,11 +51,14 @@ export default function Notifications({
         "AdminGameCancelled",
         "AdminGameNoShow",
         "AdminScheduleChanged",
+        "GameCreated",
+        "GameCancelled",
+        "game.cancelled.schedule_change",
       ].includes(n.type)
         ? p.entity_id
         : "");
     if (game) {
-      navigate(`/games/${game}`);
+      navigate(`/games/${encodeURIComponent(game)}`, { replace: !!openId });
       return;
     }
     const params = new URLSearchParams();
