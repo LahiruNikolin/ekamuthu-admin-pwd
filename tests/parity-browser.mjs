@@ -600,6 +600,7 @@ try {
     let subscribed = false;
     const subscription = {
       endpoint: "https://fcm.googleapis.com/fcm/send/fixture",
+      options: { applicationServerKey: null },
       toJSON() {
         return {
           endpoint: this.endpoint,
@@ -616,7 +617,8 @@ try {
       getNotifications: async () => [],
       pushManager: {
         getSubscription: async () => (subscribed ? subscription : null),
-        subscribe: async () => {
+        subscribe: async (options) => {
+          subscription.options.applicationServerKey = options.applicationServerKey.buffer;
           subscribed = true;
           return subscription;
         },

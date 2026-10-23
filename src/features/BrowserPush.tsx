@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAction, adminApi } from "./shared";
+import { browserSubscription, pushKey, samePushKey } from "@/lib/browser-push";
 export async function removeBrowserPush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
   const registration = await navigator.serviceWorker.getRegistration();
@@ -24,17 +25,31 @@ export default function BrowserPush() {
   const action = useAction();
   const configQuery = useQuery({
     queryKey: ["web-push-config"],
-    queryFn: ({ signal }) => adminApi.get<{ enabled: boolean; public_key: string }>("/auth/web-push", signal),
-    enabled: supported, retry: false,
+    queryFn: ({ signal }) =>
+      adminApi.get<{ enabled: boolean; public_key: string }>(
+        "/auth/web-push",
+        signal,
+      ),
+    enabled: supported,
+    retry: false,
   });
   useEffect(() => {
-    if (supported)
+    let active = true;
+    setEnabled(false);
+    const config = configQuery.data;
+    if (supported && config?.enabled)
       void navigator.serviceWorker
         .getRegistration()
         .then((r) => r?.pushManager.getSubscription())
-        .then((s) => setEnabled(!!s))
+        .then((s) => {
+          if (active)
+            setEnabled(!!s && samePushKey(s, pushKey(config.public_key)));
+        })
         .catch(() => {});
-  }, [supported]);
+    return () => {
+      active = false;
+    };
+  }, [supported, configQuery.data]);
   async function enable() {
     await action.run(async () => {
       const permission = await Notification.requestPermission();
@@ -52,16 +67,10 @@ export default function BrowserPush() {
         throw new Error(
           "Install or reload the production app before enabling notifications.",
         );
-      const key = Uint8Array.from(
-        atob(config.public_key.replace(/-/g, "+").replace(/_/g, "/")),
-        (c) => c.charCodeAt(0),
+      const subscription = await browserSubscription(
+        registration,
+        pushKey(config.public_key),
       );
-      const subscription =
-        (await registration.pushManager.getSubscription()) ||
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: key,
-        }));
       try {
         await adminApi.post("/auth/web-push", subscription.toJSON());
       } catch (e) {
@@ -75,8 +84,13 @@ export default function BrowserPush() {
     <section className="feature-card">
       <h3>Browser notifications</h3>
       {action.feedback}
-      {supported && !enabled && (configQuery.isError || configQuery.data?.enabled === false) ? (
-        <p>Browser push is not available on this backend yet. You can still use the notification feed.</p>
+      {supported &&
+      !enabled &&
+      (configQuery.isError || configQuery.data?.enabled === false) ? (
+        <p>
+          Browser push is not available on this backend yet. You can still use
+          the notification feed.
+        </p>
       ) : supported ? (
         <>
           <p>
