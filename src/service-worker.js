@@ -29,9 +29,30 @@ self.addEventListener('notificationclick', event => {
   // and derives navigation from server data, never a push-supplied external URL.
   const id = event.notification.data?.notification_id || '';
   const url = new URL('/notifications?open=' + encodeURIComponent(id), self.location.origin).href;
-  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async clients => {
-    const client = clients.find(c => new URL(c.url).origin === self.location.origin);
-    if (client) { await client.navigate(url); return client.focus(); }
-    return self.clients.openWindow(url);
-  }));
+  event.waitUntil(openNotificationWindow(url));
 });
+
+async function openNotificationWindow(url) {
+  // Launch while the notification click still supplies user activation. Chrome on
+  // Android can reuse the installed PWA here, even if a stale browser tab exists.
+  try {
+    const opened = await self.clients.openWindow(url);
+    if (opened) {
+      // Opening already loaded the target; a focus rejection must not launch twice.
+      try { await opened.focus(); } catch {}
+      return;
+    }
+  } catch {}
+
+  // Some browsers cannot open another window. Try usable same-origin windows,
+  // bringing each forward before navigation rather than waiting on a hidden tab.
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  for (const client of windows) {
+    try {
+      if (new URL(client.url).origin !== self.location.origin) continue;
+      await client.focus();
+      if (await client.navigate(url)) return;
+    } catch {}
+  }
+  throw new Error('Could not open the notification destination');
+}

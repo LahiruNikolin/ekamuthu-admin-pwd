@@ -81,7 +81,7 @@ test("a browser push click with the app closed resolves its owned notification i
     self: {
       location: { origin: "https://admin.example" },
       addEventListener: (type, handler) => { handlers[type] = handler; },
-      clients: { matchAll: async () => [], openWindow: async (url) => { opened = url; } },
+      clients: { matchAll: async () => [], openWindow: async (url) => { opened = url; return { focus: async () => {} }; } },
     },
   });
   handlers.notificationclick({

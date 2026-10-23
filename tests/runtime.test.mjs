@@ -157,8 +157,10 @@ test("push displays notification and click stays on the app origin", async () =>
       },
       clients: {
         matchAll: async () => [client],
-        openWindow: async () =>
-          assert.fail("existing client should be focused"),
+        openWindow: async (url) => {
+          navigated = url;
+          return client;
+        },
       },
     },
   });
