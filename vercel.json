@@ -7,6 +7,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
+      "has": [{ "type": "host", "value": "ekamuthu-admin-pwd.vercel.app" }],
+      "destination": "https://court-social-production.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/api/:path*",
       "destination": "https://api-staging-52eb.up.railway.app/api/:path*"
     },
     {
